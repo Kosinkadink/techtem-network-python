@@ -1,0 +1,11 @@
+arduinotemp
+camera
+filetransfer
+master
+name
+radchat
+sync
+template_standalone
+tictac
+token
+wwwrequest

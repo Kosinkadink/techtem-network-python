@@ -1,0 +1,6 @@
+*.pyc
+resources/programparts/
+resources/source/certification/techtem_server_key.pem
+resources/source/certification/techtem_cert.pem
+resources/source/certification/techtem_client_key.pem
+resources/source/certification/techtem_cert_client.pem

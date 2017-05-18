@@ -28,21 +28,24 @@ class TemplateServer(CommonCode_Server.TemplateServer):
 	char = """ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890"""
 	requireToken = True
 	# change this to default values
-	version = '3.0.0'
-	serverport = 9015
-	useConfigPort = True
-	send_cache = 40960
-	send_cache_enc = 40960
-	RSA_bitlength = 2048
-	shouldEncrypt = True
-	shouldEncryptDownload = True
-	scriptname = 'sync'
-	function = 'sync_client'
-	name = 'sync'
-	downloadAddrLoc = 'jedkos.com:9011&&protocols/sync.py' 
+	varDict = {
+		"version": '3.0.0',
+		"serverport": 9015,
+		"useConfigPort": True,
+		"send_cache": 409600,
+		"scriptname": 'sync',
+		"scriptfunction": 'sync_client',
+		"name": 'sync',
+		"downloadAddrLoc": 'jedkos.com:9011&&protocols/sync.py'
+	}
 	#form is ip:port&&location/on/filetransferserver/file.py
 
-	def __init__(self, serve=serverport):
+	#send_cache_enc = 40960
+	#RSA_bitlength = 2048
+	#shouldEncrypt = True
+	#shouldEncryptDownload = True
+	
+	def __init__(self, serve=varDict["serverport"]):
 		#self.__location__ = __location__
 		CommonCode_Server.TemplateServer.__init__(self,serve)
 
@@ -55,7 +58,7 @@ class TemplateServer(CommonCode_Server.TemplateServer):
 		'size':self.sizeCommand
 		}
 		# insert application-specific initialization code here
-		if not os.path.exists(__location__+'/resources/programparts/%s' % self.name): os.makedirs(__location__+'/resources/programparts/%s' % self.name)
+		if not os.path.exists(__location__+'/resources/programparts/%s' % self.varDict["name"]): os.makedirs(__location__+'/resources/programparts/%s' % self.varDict["name"])
 		if not os.path.exists(__location__+'/resources/programparts/sync/syncdatabase.sqlite3'):
 			conn = sqlite3.connect(__location__+'/resources/programparts/sync/syncdatabase.sqlite3')
 			cur = conn.cursor()
@@ -65,8 +68,8 @@ class TemplateServer(CommonCode_Server.TemplateServer):
 			with open(__location__+'/resources/programparts/sync/synclocations.txt', 'wb') as locations:
 				locations.write("## write all locations as |ip:port|ip:port|...|\n")
 		# create token server list
-		if not os.path.exists(__location__+'/resources/programparts/%s/tokenservers.txt' % self.name):
-			with open(__location__+'/resources/programparts/%s/tokenservers.txt' % self.name,'wb') as tokenservs:
+		if not os.path.exists(__location__+'/resources/programparts/%s/tokenservers.txt' % self.varDict["name"]):
+			with open(__location__+'/resources/programparts/%s/tokenservers.txt' % self.varDict["name"],'wb') as tokenservs:
 				tokenservs.write("## write an IP like this: ||ip:port||")
 
 
@@ -614,7 +617,7 @@ class TemplateServer(CommonCode_Server.TemplateServer):
 					s.sendall('bad server configuration')
 					print 'ERROR: server was not given any token servers!'
 					return
-				validToken = tokenClient.connectip(tokenServerIP,requested_token+'|'+self.name,'checkout')
+				validToken = tokenClient.connectip(tokenServerIP,requested_token+'|'+self.varDict["name"],'checkout')
 				if validToken:
 					s.sendall('y')
 				else:

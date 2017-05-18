@@ -109,9 +109,9 @@ def get_netPass(__location__):
         netPass = None
     else:
         with open(__location__+'/resources/networkpass/default.txt', "r") as protlist: #file used for identifying what protocols are available
-            netpassword = protlist.readline()
+            netpassword = protlist.readline().strip()
         if netpassword != '':
-            netPass = netpassword.strip()
+            netPass = netpassword
         else:
             netPass = None
     return netPass
@@ -136,10 +136,15 @@ def netPass_check(s,netPass):
             s.sendall('y')
             return True
 
-def config(varDic,__location__,usePort=True):
+def config(varDic,__location__):
     # if config file does not exist, create one and insert default values.
     # if config files does exist, read values from it
     name = varDic['name']
+    if varDic['useConfigPort'] != None:
+        usePort = varDic['useConfigPort']
+    else:
+        userPort = False
+
     if not os.path.exists(__location__+'/resources/programparts/'+name+'/config.txt'): 
         with open(__location__+'/resources/programparts/'+name+'/config.txt', "wb") as configs:
             for key,value in varDic.iteritems():

@@ -9,145 +9,8 @@ import CommonCode
 __location__ = None
 
 
-def distinguishCommand(self, s):
-    order = s.recv(128)
-    print 'command is: %s' % order
 
-    try:
-        func = self.funcMap[order]
-    except KeyError:
-        s.send('no')
-        print 'command %s not understood' % order
-    else:
-        s.send('ok')
-        print 'command understood, performing: %s' % order
-        func(s)
-
-
-def servergen(self, repeatFunc=None):
-    print '%s server started - version %s on port %s\n' % (
-        self.varDict["name"], self.varDict["version"], self.varDict["serverport"])
-    self.get_netPass(__location__)
-    # create a socket object
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    socketlist = []
-    # get local machine name
-    host = ""
-    port = self.varDict["serverport"]
-
-    userinput = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # bind to the port + admin port
-    try:
-        serversocket.bind((host, port))
-        userinput.bind((host, port + 1000))
-    except Exception, e:
-        print str(e)
-        self.shouldExit = True
-
-    # queue up to 10 requests
-    serversocket.listen(10)
-    socketlist.append(serversocket)
-    # start admin socket
-    userinput.listen(2)
-    socketlist.append(userinput)
-
-    while 1 and not self.shouldExit:
-        if repeatFunc is not None:
-            repeatFunc()
-        sleep(.1)
-
-        ready_to_read, ready_to_write, in_error = select.select(socketlist, [], [], 0)
-
-        for sock in ready_to_read:
-            # establish a connection
-            if sock == userinput:
-                user, addr = userinput.accept()
-                userinp = user.recv(128)
-                self.serverterminal(userinp)
-            elif sock == serversocket:
-                s, addr = serversocket.accept()
-                newthread = threading.Thread(target=handleNewConnection, args=(self, s, addr))
-                newthread.daemon = True
-                newthread.start()
-
-    userinput.shutdown(socket.SHUT_RDWR)
-    userinput.close()
-    serversocket.shutdown(socket.SHUT_RDWR)
-    serversocket.close()
-    self.exit()
-
-
-def handleNewConnection(self, s, addr):
-    print("Got a connection from %s" % str(addr))
-    # wrap socket with TLS, handshaking happens automatically
-    s = self.context.wrap_socket(s, server_side=True)
-    # wrap socket with socketTem, to send length of message first
-    s = CommonCode.socketTem(s)
-    # receive connection request
-    conn_req = ast.literal_eval(s.recv(1024))
-    # determine if good to go
-    readyToGo = True
-    responses = {"status": 200, "msg": "OK"}
-    # check netpass
-    if conn_req["netpass"] != self.get_netPass(__location__):
-        readyToGo = False
-        responses.setdefault("errors", []).append("invalid netpass")
-    # check script info
-    if conn_req["scriptname"] != self.varDict["scriptname"]:
-        readyToGo = False
-        responses.setdefault("errors", []).append("invalid scriptname")
-    if conn_req["scriptfunction"] != self.varDict["scriptfunction"]:
-        readyToGo = False
-        responses.setdefault("errors", []).append("invalid scriptfunction")
-    if conn_req["version"] != self.varDict["version"]:
-        readyToGo = False
-        responses.setdefault("errors", []).append("invalid version")
-    try:
-        func = self.funcMap[conn_req["command"]]
-    except KeyError, e:
-        readyToGo = False
-        responses.setdefault("errors", []).append("command not recognized: %s" % conn_req["command"])
-    # if ready to go, send confirmation and continue
-    if readyToGo:
-        conn_resp = json.dumps(responses)
-        s.sendall(conn_resp)
-        func(s)
-    # otherwise send info back
-    else:
-        responses["status"] = 400
-        responses["msg"] = "BAD"
-        responses["downloadAddrLoc"] = self.varDict["downloadAddrLoc"]
-        conn_resp = json.dumps(responses)
-        s.sendall(conn_resp)
-
-
-def socket_raw_input(port):
-    admin_port = port + 1000
-    # connect to port
-    while True:
-        userinp = raw_input()
-        tries = 0
-        success = False
-        error = None
-        while tries < 5:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect(('localhost', admin_port))
-            except Exception, e:
-                error = e
-                tries += 1
-            else:
-                success = True
-                break
-        if not success:
-            raise e
-        s.sendall(userinp)
-        if userinp == 'exit':
-            s.close()
-            break
-
-
-def main(argv, TemplateServer):
+def main(argv, templateServer):
     startRawInput = True
     portS = None
     try:
@@ -162,24 +25,14 @@ def main(argv, TemplateServer):
             startRawInput = False
 
     if portS == None:
-        if startRawInput:
-            print 'starting input thread...'
-            raw_input_thread = threading.Thread(target=socket_raw_input, args=(TemplateServer.varDict["serverport"],))
-            raw_input_thread.daemon = True
-            raw_input_thread.start()
-        program = TemplateServer().start()
+        program = templateServer(startUser=startRawInput).start()
     else:
         try:
             portI = int(portS)
         except ValueError:
             print 'port must be an integer'
         else:
-            if startRawInput:
-                print 'starting input thread...'
-                raw_input_thread = threading.Thread(target=socket_raw_input, args=(portI,))
-                raw_input_thread.daemon = True
-                raw_input_thread.start()
-            program = TemplateServer(portI).start()
+            program = templateServer(portI,startUser=startRawInput).start()
 
 
 class TemplateServer(object):
@@ -189,25 +42,18 @@ class TemplateServer(object):
     startTime = None
     context = None
     # change this to default values
-    varDict = {
-        "version": '3.0.0',
-        "serverport": 9999,
-        "useConfigPort": True,
-        "send_cache": 409600,
-        "scriptname": None,
-        "function": None,
-        "name": 'template',
-        "downloadAddrLoc": 'jedkos.com:9011&&protocols/name.py'
-    }
-
+    varDict = dict(version='3.0.0', serverport=9999, userport=10999, useConfigPort=True, send_cache=409600,
+                   scriptname=None, function=None, name='template',
+                   downloadAddrLoc='jedkos.com:9011&&protocols/name.py')
     # form is ip:port&&location/on/filetransferserver/file.py
 
-
-    def __init__(self, serve=varDict["serverport"]):
+    def __init__(self, serve=varDict["serverport"], user=varDict["userport"], startUser=True):
         if serve != None:
-            self.useConfigPort = False
+            self.varDict["useConfigPort"] = False
             self.varDict["serverport"] = int(serve)
+        self.startUser = startUser
         self.shouldExit = False
+        self.funcMap = {}  # fill in with a string key and a function value
 
     def start(self):
         self.run()
@@ -217,13 +63,45 @@ class TemplateServer(object):
 
     def run_processes(self):
         try:
-            self.servergen(self)
+            self.start_user_input()
+            self.servergen()
         except Exception, e:
             print str(e)
             self.shouldExit = True
 
+    def start_user_input(self):
+        if self.startUser:
+            raw_input_thread = threading.Thread(target=self.socket_raw_input, args=(self.varDict["userport"],))
+            raw_input_thread.daemon = True
+            raw_input_thread.start()
+            print("user input thread started - port {}".format(self.varDict["userport"]))
+
+    def socket_raw_input(self, admin_port):
+        # connect to port
+        while True:
+            userinp = raw_input()
+            tries = 0
+            success = False
+            error = None
+            while tries < 5:
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.connect(('localhost', admin_port))
+                except Exception, e:
+                    error = e
+                    tries += 1
+                else:
+                    success = True
+                    break
+            if not success:
+                raise error
+            s.sendall(userinp)
+            if userinp == 'exit':
+                s.close()
+                break
+
     def initialize(self):
-        # make directories if dont exist
+        # make directories if don't exist
         if not os.path.exists(__location__ + '/resources'): os.makedirs(__location__ + '/resources')
         if not os.path.exists(__location__ + '/resources/protocols'): os.makedirs(
             __location__ + '/resources/protocols')  # for protocol scripts
@@ -251,12 +129,11 @@ class TemplateServer(object):
         self.varDict = self.config(self.varDict, __location__)
         # reassign values
         self.varDict["serverport"] = int(self.varDict["serverport"])
+        self.varDict["userport"] = int(self.varDict["userport"])
         self.varDict["send_cache"] = int(self.varDict["send_cache"])
 
     def injectCommonCode(self):
         self.clear = CommonCode.clear
-        self.servergen = servergen
-        self.distinguishCommand = distinguishCommand
         self.get_netPass = CommonCode.get_netPass
         self.gen_protlist = CommonCode.gen_protlist
         self.netPass_check = CommonCode.netPass_check
@@ -272,10 +149,9 @@ class TemplateServer(object):
         self.context.verify_mode = ssl.CERT_REQUIRED
 
     def init_spec(self):
-        self.funcMap = {}  # fill in with a string key and a function value
         # insert application-specific initialization code here
-        if not os.path.exists(__location__ + '/resources/programparts/%s' % self.varDict["name"]): os.makedirs(
-            __location__ + '/resources/programparts/%s' % self.varDict["name"])
+        if not os.path.exists(__location__ + '/resources/programparts/%s' % self.varDict["name"]):
+            os.makedirs(__location__ + '/resources/programparts/%s' % self.varDict["name"])
 
     def serverterminal(self, inp):  # used for server commands
         if inp:
@@ -286,7 +162,7 @@ class TemplateServer(object):
             elif inp == 'info':
                 self.info()
 
-    def exit(self):  # kill all proceses for a tidy exit
+    def exit(self):  # kill all processes for a tidy exit
         self.shouldExit = True
 
     def info(self):  # display current configuration
@@ -294,8 +170,106 @@ class TemplateServer(object):
         print("name: %s" % self.varDict["name"])
         print("version: %s" % self.varDict["version"])
         print("serverport: %s" % self.varDict["serverport"])
+        print("userport: %s" % self.varDict["userport"])
         print("send_cache: %s" % self.varDict["send_cache"])
         print("scriptname: %s" % self.varDict["scriptname"])
         print("scriptfunction: %s" % self.varDict["scriptfunction"])
         print("downloadAddrLoc: %s" % self.varDict["downloadAddrLoc"])
         print("")
+
+    def servergen(self, repeatFunc=None):
+        print '%s server started - version %s on port %s\n' % (
+            self.varDict["name"], self.varDict["version"], self.varDict["serverport"])
+        self.get_netPass(__location__)
+        # create a socket object
+        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socketlist = []
+        # get local machine name
+        host = ""
+        port = self.varDict["serverport"]
+        userport = self.varDict["userport"]
+
+        userinput = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # bind to the port + admin port
+        try:
+            serversocket.bind((host, port))
+            userinput.bind((host, userport))
+        except Exception, e:
+            print str(e)
+            self.shouldExit = True
+
+        # queue up to 10 requests
+        serversocket.listen(10)
+        socketlist.append(serversocket)
+        # start admin socket
+        userinput.listen(2)
+        socketlist.append(userinput)
+
+        while 1 and not self.shouldExit:
+            if repeatFunc is not None:
+                repeatFunc()
+            sleep(.1)
+
+            ready_to_read, ready_to_write, in_error = select.select(socketlist, [], [], 0)
+
+            for sock in ready_to_read:
+                # establish a connection
+                if sock == userinput:
+                    user, addr = userinput.accept()
+                    userinp = user.recv(128)
+                    self.serverterminal(userinp)
+                elif sock == serversocket:
+                    s, addr = serversocket.accept()
+                    newthread = threading.Thread(target=self.handleNewConnection, args=(s, addr))
+                    newthread.daemon = True
+                    newthread.start()
+
+        userinput.shutdown(socket.SHUT_RDWR)
+        userinput.close()
+        serversocket.shutdown(socket.SHUT_RDWR)
+        serversocket.close()
+        self.exit()
+
+    def handleNewConnection(self, s, addr):
+        print("Got a connection from %s" % str(addr))
+        # wrap socket with TLS, handshaking happens automatically
+        s = self.context.wrap_socket(s, server_side=True)
+        # wrap socket with socketTem, to send length of message first
+        s = CommonCode.socketTem(s)
+        # receive connection request
+        conn_req = ast.literal_eval(s.recv(1024))
+        # determine if good to go
+        readyToGo = True
+        responses = {"status": 200, "msg": "OK"}
+        # check netpass
+        if conn_req["netpass"] != self.get_netPass(__location__):
+            readyToGo = False
+            responses.setdefault("errors", []).append("invalid netpass")
+        # check script info
+        if conn_req["scriptname"] != self.varDict["scriptname"]:
+            readyToGo = False
+            responses.setdefault("errors", []).append("invalid scriptname")
+        if conn_req["scriptfunction"] != self.varDict["scriptfunction"]:
+            readyToGo = False
+            responses.setdefault("errors", []).append("invalid scriptfunction")
+        if conn_req["version"] != self.varDict["version"]:
+            readyToGo = False
+            responses.setdefault("errors", []).append("invalid version")
+        try:
+            func = self.funcMap[conn_req["command"]]
+        except KeyError, e:
+            readyToGo = False
+            responses.setdefault("errors", []).append("command not recognized: %s" % conn_req["command"])
+        # if ready to go, send confirmation and continue
+        if readyToGo:
+            conn_resp = json.dumps(responses)
+            s.sendall(conn_resp)
+            func(s)
+        # otherwise send info back
+        else:
+            responses["status"] = 400
+            responses["msg"] = "BAD"
+            responses["downloadAddrLoc"] = self.varDict["downloadAddrLoc"]
+            conn_resp = json.dumps(responses)
+            s.sendall(conn_resp)
+

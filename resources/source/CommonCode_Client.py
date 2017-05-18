@@ -94,43 +94,6 @@ def connectprotocolclient(self, s, data, command):  # communicate via protocol t
         return func(s, data)
 
 
-# #hasPass = s.recv(2)
-#	#print hasPass
-#	#if hasPass == 'yp':
-#	#	if self.netPass == None:
-#	#		s.sendall('n')
-#	#		s.close()
-#	#		return 'requires password'
-#	#	else:
-#	#		s.sendall('y')
-#	#		s.recv(2)
-#	#		s.sendall(self.netPass)
-#	#		right = s.recv(1)
-#	#		if right != 'y':
-#	#			s.close()
-#	#			return 'incorrect password'
-#	#
-#	#s.sendall('%s:%s:%s' % (self.scriptname,self.scriptfunction,self.version)) #check if sync_client is connecting
-#	#compat = s.recv(1)
-#	#
-#	#if compat == 'y':
-#	#	s.sendall('ok')
-#	#	s.recv(2)
-#	#	print 'success initiated'
-#	#	return distinguishCommand(self, s, data, command)
-#	#
-#	#else:
-#	#	s.sendall('ok')
-#	#	#resp = s.recv(1024)
-#	#	resp = s.recv(1024)
-#	#	s.close()
-#	#	print 'failure. closing connection...'
-#	#	return resp
-#
-#	#s.close()
-#	#return 'connection closed'
-
-
 def connectprotocolclient_netclient(self, s, data, command):
     self.netPass = self.get_netPass(__location__)
     scriptname, function, scriptversion = command.split(':')

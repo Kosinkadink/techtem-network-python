@@ -24,15 +24,15 @@ def main(argv, templateServer):
         if opt in ("-t"):
             startRawInput = False
 
-    if portS == None:
-        program = templateServer(startUser=startRawInput).start()
+    if portS is None:
+        templateServer(startUser=startRawInput).start()
     else:
         try:
             portI = int(portS)
         except ValueError:
             print 'port must be an integer'
         else:
-            program = templateServer(portI,startUser=startRawInput).start()
+            templateServer(portI, startUser=startRawInput).start()
 
 
 class TemplateServer(object):
@@ -48,7 +48,7 @@ class TemplateServer(object):
     # form is ip:port&&location/on/filetransferserver/file.py
 
     def __init__(self, serve=varDict["serverport"], user=varDict["userport"], startUser=True):
-        if serve != None:
+        if serve is not None:
             self.varDict["useConfigPort"] = False
             self.varDict["serverport"] = int(serve)
         self.startUser = startUser

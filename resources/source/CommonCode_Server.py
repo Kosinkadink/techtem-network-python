@@ -9,7 +9,6 @@ import CommonCode
 __location__ = None
 
 
-
 def main(argv, templateServer):
     startRawInput = True
     portS = None
@@ -35,16 +34,19 @@ def main(argv, templateServer):
             templateServer(portI, startUser=startRawInput).start()
 
 
+# sort of an abstract class; will not work on its own
 class TemplateServer(object):
     # don't change this
     threads = []
     pipes = []
     startTime = None
     context = None
+    netPass = None
     # change this to default values
     varDict = dict(version='3.0.0', serverport=9999, userport=10999, useConfigPort=True, send_cache=409600,
                    scriptname=None, function=None, name='template',
-                   downloadAddrLoc='jedkos.com:9011&&protocols/name.py')
+                   downloadAddrLoc='jedkos.com:9011&&protocols/template.py')
+
     # form is ip:port&&location/on/filetransferserver/file.py
 
     def __init__(self, serve=varDict["serverport"], user=varDict["userport"], startUser=True):
@@ -122,6 +124,7 @@ class TemplateServer(object):
         self.init_spec()
         # config stuff
         self.loadConfig()
+        self.netPass = self.get_netPass()
         self.run_processes()
 
     def loadConfig(self):
@@ -242,7 +245,7 @@ class TemplateServer(object):
         readyToGo = True
         responses = {"status": 200, "msg": "OK"}
         # check netpass
-        if conn_req["netpass"] != self.get_netPass(__location__):
+        if conn_req["netpass"] != self.netPass:
             readyToGo = False
             responses.setdefault("errors", []).append("invalid netpass")
         # check script info
@@ -272,4 +275,3 @@ class TemplateServer(object):
             responses["downloadAddrLoc"] = self.varDict["downloadAddrLoc"]
             conn_resp = json.dumps(responses)
             s.sendall(conn_resp)
-

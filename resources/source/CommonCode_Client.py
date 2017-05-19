@@ -43,22 +43,6 @@ def connectip_netclient(self, ip, data, command):
     return connectprotocolclient_netclient(self, s, data, command)
 
 
-def distinguishCommand(self, s, data, command):  # interpret what to tell seed
-    try:
-        func = self.funcMap[command]
-    except KeyError:
-        print 'unknown commmand: %s' % command
-        s.send('no')
-    else:
-        s.sendall(command)
-        understood = s.recv(2)
-        if understood == 'ok':
-            print 'command: %s understood by seed' % command
-            return func(s, data)
-        else:
-            print 'command: %s not understood by seed' % command
-
-
 def connectprotocolclient(self, s, data, command):  # communicate via protocol to command seed
     global version
     # wrap socket with TLS, handshaking happens automatically
@@ -67,10 +51,10 @@ def connectprotocolclient(self, s, data, command):  # communicate via protocol t
     s = CommonCode.socketTem(s)
     # create connection request
     conn_req = json.dumps({
-        "netpass": self.get_netPass(__location__),
-        "scriptname": self.scriptname,
-        "scriptfunction": self.scriptfunction,
-        "version": self.version,
+        "netpass": self.netPass,
+        "scriptname": self.varDict["scriptname"],
+        "scriptfunction": self.varDict["scriptfunction"],
+        "version": self.varDict["version"],
         "command": command,
         "data": data
     })
@@ -95,7 +79,6 @@ def connectprotocolclient(self, s, data, command):  # communicate via protocol t
 
 
 def connectprotocolclient_netclient(self, s, data, command):
-    self.netPass = self.get_netPass(__location__)
     scriptname, function, scriptversion = command.split(':')
     # wrap socket with TLS, handshaking happens automatically
     s = self.context.wrap_socket(s)
@@ -104,9 +87,9 @@ def connectprotocolclient_netclient(self, s, data, command):
     # create connection request
     conn_req = json.dumps({
         "netpass": self.netPass,
-        "scriptname": scriptname,
-        "scriptfunction": function,
-        "version": scriptversion,
+        "scriptname": self.varDict["scriptname"],
+        "scriptfunction": self.varDict["scriptfunction"],
+        "version": self.varDict["version"],
         "command": command,
         "data": data
     })
@@ -166,18 +149,13 @@ def connectprotocolclient_netclient(self, s, data, command):
 
 # sort of an abstract class; will not work on its own
 class TemplateProt(object):
-    netPass = None
-    password = None
-    username = None
-    send_cache = 409600
-    send_cache_enc = 40960
-    shouldEncrypt = True
-    startTerminal = True
-    scriptname = 'template'
-    scriptfunction = 'template_client'
-    version = '3.0.0'
+    # don't change this
     threads = []
     context = None
+    netPass = None
+    startTerminal = True
+    # change this to default values
+    varDir = dict(send_cache=409600, scriptname='template', scriptfunction='template_client', version='3.0.0')
 
     def __init__(self, location, startTerminal):
         global __location__
@@ -206,16 +184,15 @@ class TemplateProt(object):
         if not os.path.exists(__location__ + '/resources/networkpass'): os.makedirs(
             __location__ + '/resources/networkpass')  # contains network passwords
         self.injectCommonCode()
-        self.netPass = self.get_netPass(__location__)
         self.gen_protlist(__location__)
         self.generateContextTLS()
+        self.netPass = self.get_netPass(__location__)
         self.init_spec()
         self.run_processes()
 
     def injectCommonCode(self):
         self.clear = CommonCode.clear
         self.connectip = connectip
-        self.distinguishCommand = distinguishCommand
         self.get_netPass = CommonCode.get_netPass
         self.gen_protlist = CommonCode.gen_protlist
         self.netPass_check = CommonCode.netPass_check

@@ -25,15 +25,15 @@ serverfunction = 'server_function'
 # script-specific variables
 
 class SyncClient(CommonCode_Client.TemplateProt):
-    scriptname = 'sync'
-    scriptfunction = 'sync_client'
-    version = '3.0.0'
+    # don't change this
     threads = []
     doAutoSync = False  # toggled by user
     isSyncing = False  # toggled by program
     syncInterval = 60
     preferredSumType = 'time'
     continueRunning = True
+    # change this for client
+    varDict = dict(send_cache=409600, scriptname='sync', scriptfunction='sync_client', version='3.0.0')
 
     def __init__(self, location, startTerminal):
         global __location__
@@ -69,16 +69,12 @@ class SyncClient(CommonCode_Client.TemplateProt):
 ##Files will be sent to and from these servers
 ##Only lines starting with || will be read
 ####################################################""")
-            # sync files end
+                # sync files end
 
     def boot(self):
         self.clear()
         print "TechTem Sync Client started"
-        print "Version " + self.version
-        if self.shouldEncrypt:
-            print "Encryption is ON"
-        else:
-            print "Encryption is OFF"
+        print "Version " + self.varDict["version"]
         print "Type help for command list\n"
 
     def help(self):
@@ -105,8 +101,6 @@ class SyncClient(CommonCode_Client.TemplateProt):
                         break
                     elif inp.split()[0] == 'clear':
                         self.boot()
-                    elif inp.split()[0] in ['encrypt', 'enc']:
-                        self.shouldEncrypt = self.toggleEncrypt(self.shouldEncrypt)
                     elif inp.split()[0] in ['autosync', 'auto']:
                         self.toggleAutoSync()
                     elif inp.split()[0] in ['interval', 'int']:

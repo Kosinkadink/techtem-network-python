@@ -124,27 +124,6 @@ def get_netPass(__location__):
     return netPass
 
 
-##NETWORKING CODE
-def netPass_check(s, netPass):
-    s.sendall('yp')
-    has = s.recv(1)
-    s.sendall('ok')
-    if has != 'y':
-        print "does not have proper password"
-        s.close
-        return False
-    else:
-        cliPass = s.recv(512).strip()
-        if cliPass != netPass:
-            s.sendall('n')
-            print "does not have proper password"
-            s.close
-            return False
-        else:
-            s.sendall('y')
-            return True
-
-
 def config(varDic, __location__):
     # if config file does not exist, create one and insert default values.
     # if config files does exist, read values from it

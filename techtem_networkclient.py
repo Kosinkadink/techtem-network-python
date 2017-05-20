@@ -19,8 +19,8 @@ class NetworkClient(object):
     threads = []
     serverport = None
     serverports = None
-    send_cache = 40960
-    version = "3.0.0"
+
+    varDict = dict(send_cache=409600, version="3.0.0")
 
     class ClientObject(object):
         location = None
@@ -85,7 +85,7 @@ class NetworkClient(object):
     def boot(self):
         self.clear()
         print "Welcome to the TechTem Network Client"
-        print "Version %s" % self.version
+        print "Version %s" % self.varDict["version"]
         print "Type help for command list\n"
 
     # function for client splash screen

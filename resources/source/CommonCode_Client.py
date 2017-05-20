@@ -88,7 +88,6 @@ def connectprotocolclient_netclient(self, s, data, command):
     conn_req = json.dumps({
         "netpass": self.netPass,
         "scriptname": self.varDict["scriptname"],
-        "scriptfunction": self.varDict["scriptfunction"],
         "version": self.varDict["version"],
         "command": command,
         "data": data
@@ -155,11 +154,12 @@ class TemplateProt(object):
     netPass = None
     startTerminal = True
     # change this to default values
-    varDir = dict(send_cache=409600, scriptname='template', scriptfunction='template_client', version='3.0.0')
+    varDir = dict(send_cache=409600, scriptname='template', version='3.0.0')
 
     def __init__(self, location, startTerminal):
         global __location__
         __location__ = location
+        self.injectCommonCode()
         self.startTerminal = startTerminal
         self.funcMap = {}  # fill with string:functions pairs
         self.initialize()
@@ -183,7 +183,6 @@ class TemplateProt(object):
             __location__ + '/resources/downloads')  # used to store downloaded files
         if not os.path.exists(__location__ + '/resources/networkpass'): os.makedirs(
             __location__ + '/resources/networkpass')  # contains network passwords
-        self.injectCommonCode()
         self.gen_protlist(__location__)
         self.generateContextTLS()
         self.netPass = self.get_netPass(__location__)
@@ -195,7 +194,6 @@ class TemplateProt(object):
         self.connectip = connectip
         self.get_netPass = CommonCode.get_netPass
         self.gen_protlist = CommonCode.gen_protlist
-        self.netPass_check = CommonCode.netPass_check
         self.createFileTransferProt = CommonCode.createFileTransferProt
 
     def generateContextTLS(self):

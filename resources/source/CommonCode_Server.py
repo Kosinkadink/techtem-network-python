@@ -44,18 +44,20 @@ class TemplateServer(object):
     netPass = None
     # change this to default values
     varDict = dict(version='3.0.0', serverport=9999, userport=10999, useConfigPort=True, send_cache=409600,
-                   scriptname=None, function=None, name='template',
+                   scriptname=None, name='template',
                    downloadAddrLoc='jedkos.com:9011&&protocols/template.py')
 
     # form is ip:port&&location/on/filetransferserver/file.py
 
     def __init__(self, serve=varDict["serverport"], user=varDict["userport"], startUser=True):
+        self.injectCommonCode()
         if serve is not None:
             self.varDict["useConfigPort"] = False
             self.varDict["serverport"] = int(serve)
         self.startUser = startUser
         self.shouldExit = False
         self.funcMap = {}  # fill in with a string key and a function value
+        self.terminalMap = {"exit":self.exit, "clear":self.clear, "info":self.info}
 
     def start(self):
         self.run()
@@ -118,13 +120,12 @@ class TemplateServer(object):
         if not os.path.exists(__location__ + '/resources/networkpass'): os.makedirs(
             __location__ + '/resources/networkpass')  # contains network passwords
         # perform all tasks
-        self.injectCommonCode()
         self.gen_protlist(__location__)
         self.generateContextTLS()
         self.init_spec()
         # config stuff
         self.loadConfig()
-        self.netPass = self.get_netPass()
+        self.netPass = self.get_netPass(__location__)
         self.run_processes()
 
     def loadConfig(self):
@@ -139,7 +140,6 @@ class TemplateServer(object):
         self.clear = CommonCode.clear
         self.get_netPass = CommonCode.get_netPass
         self.gen_protlist = CommonCode.gen_protlist
-        self.netPass_check = CommonCode.netPass_check
         self.createFileTransferProt = CommonCode.createFileTransferProt
         self.config = CommonCode.config
 
@@ -157,16 +157,10 @@ class TemplateServer(object):
             os.makedirs(__location__ + '/resources/programparts/%s' % self.varDict["name"])
 
     def serverterminal(self, inp):  # used for server commands
-        if inp:
-            if inp == 'exit':
-                self.exit()
-            elif inp == 'clear':
-                self.clear()
-            elif inp == 'info':
-                self.info()
-
-    def exit(self):  # kill all processes for a tidy exit
-        self.shouldExit = True
+        try:
+            self.terminalMap[inp]()
+        except KeyError,e:
+            pass
 
     def info(self):  # display current configuration
         print("INFORMATION:")
@@ -252,9 +246,6 @@ class TemplateServer(object):
         if conn_req["scriptname"] != self.varDict["scriptname"]:
             readyToGo = False
             responses.setdefault("errors", []).append("invalid scriptname")
-        if conn_req["scriptfunction"] != self.varDict["scriptfunction"]:
-            readyToGo = False
-            responses.setdefault("errors", []).append("invalid scriptfunction")
         if conn_req["version"] != self.varDict["version"]:
             readyToGo = False
             responses.setdefault("errors", []).append("invalid version")

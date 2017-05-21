@@ -22,17 +22,17 @@ class NetworkClient(object):
 
     varDict = dict(send_cache=409600, version="3.0.0")
 
-    class ClientObject(object):
-        location = None
-        data = None
-        send_cache = None  # data send cache for non-encrypted connection
-        s = None  # socket connection
-
-        def __init__(self, s, data, send_cache, send_cache_enc, location):
-            self.s = s
-            self.data = data
-            self.send_cache = send_cache
-            self.location = location
+#    class ClientObject(object):
+#        location = None
+#        data = None
+#        send_cache = None  # data send cache for non-encrypted connection
+#        s = None  # socket connection
+#
+#        def __init__(self, s, data, send_cache, send_cache_enc, location):
+#            self.s = s
+#            self.data = data
+#            self.send_cache = send_cache
+#            self.location = location
 
     def __init__(self):
         self.initialize()

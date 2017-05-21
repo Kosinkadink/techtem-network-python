@@ -6,10 +6,8 @@ import ssl, json, ast
 
 import CommonCode
 
-__location__ = None
 
-
-def connectip(self, ip, data, command):  # connect to ip
+def connectip(self, ip, data, command, funcMapping=self.funcMap):  # connect to ip
     try:
         host = ip.split(':')[0]
         port = int(ip.split(':')[1])
@@ -23,27 +21,27 @@ def connectip(self, ip, data, command):  # connect to ip
         s.close()
         return "Server at " + ip + " not available\n"
     print "\nConnection successful to " + ip
-    return connectprotocolclient(self, s, data, command)
+    return connectprotocolclient(self, s, data, command, funcMapping)
 
 
-def connectip_netclient(self, ip, data, command):
-    try:
-        host = ip.split(':')[0]
-        port = int(ip.split(':')[1])
-    except:
-        return 'invalid host/port provided\n'
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(5)
-    try:
-        s.connect((host, port))
-    except:
-        s.close()
-        return "Server at " + ip + " not available\n"
-    print "\nConnection successful to " + ip
-    return connectprotocolclient_netclient(self, s, data, command)
+# def connectip_netclient(self, ip, data, command):
+#     try:
+#         host = ip.split(':')[0]
+#         port = int(ip.split(':')[1])
+#     except:
+#         return 'invalid host/port provided\n'
+#     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     s.settimeout(5)
+#     try:
+#         s.connect((host, port))
+#     except:
+#         s.close()
+#         return "Server at " + ip + " not available\n"
+#     print "\nConnection successful to " + ip
+#     return connectprotocolclient_netclient(self, s, data, command)
 
 
-def connectprotocolclient(self, s, data, command):  # communicate via protocol to command seed
+def connectprotocolclient(self, s, data, command, funcMapping):  # communicate via protocol to command seed
     global version
     # wrap socket with TLS, handshaking happens automatically
     s = self.context.wrap_socket(s)
@@ -78,33 +76,33 @@ def connectprotocolclient(self, s, data, command):  # communicate via protocol t
         return func(s, data)
 
 
-def connectprotocolclient_netclient(self, s, data, command):
-    scriptname, function, scriptversion = command.split(':')
-    # wrap socket with TLS, handshaking happens automatically
-    s = self.context.wrap_socket(s)
-    # wrap socket with socketTem, to send length of message first
-    s = CommonCode.socketTem(s)
-    # create connection request
-    conn_req = json.dumps({
-        "netpass": self.netPass,
-        "scriptname": self.varDict["scriptname"],
-        "version": self.varDict["version"],
-        "command": command,
-        "data": data
-    })
-    # send connection request
-    s.sendall(conn_req)
-    # get response from server
-    conn_resp = ast.literal_eval(s.recv(1024))
-    # determine if good to go
-    if conn_resp["status"] != 200:
-        s.close()
-        print "failure. closing connection: {0}:{1}".format(conn_resp["status"], conn_resp["msg"])
-        return conn_resp
-    else:
-        print "success. continuing..."
-        return distinguishCommand(self, s, data, command)
-
+# def connectprotocolclient_netclient(self, s, data, command):
+#     scriptname, function, scriptversion = command.split(':')
+#     # wrap socket with TLS, handshaking happens automatically
+#     s = self.context.wrap_socket(s)
+#     # wrap socket with socketTem, to send length of message first
+#     s = CommonCode.socketTem(s)
+#     # create connection request
+#     conn_req = json.dumps({
+#         "netpass": self.netPass,
+#         "scriptname": self.varDict["scriptname"],
+#         "version": self.varDict["version"],
+#         "command": command,
+#         "data": data
+#     })
+#     # send connection request
+#     s.sendall(conn_req)
+#     # get response from server
+#     conn_resp = ast.literal_eval(s.recv(1024))
+#     # determine if good to go
+#     if conn_resp["status"] != 200:
+#         s.close()
+#         print "failure. closing connection: {0}:{1}".format(conn_resp["status"], conn_resp["msg"])
+#         return conn_resp
+#     else:
+#         print "success. continuing..."
+#         return distinguishCommand(self, s, data, command)
+#
 
 # #hasPass = s.recv(2)
 #	#print hasPass
@@ -133,7 +131,7 @@ def connectprotocolclient_netclient(self, s, data, command):
 #	#	varcheck = getattr(script,'variables')
 #	#	if len(varcheck) <= len(data):
 #	#		use = getattr(script,function)
-#	#		keyinfo = self.ClientObject(s,data,self.send_cache,self.send_cache_enc,__location__)
+#	#		keyinfo = self.ClientObject(s,data,self.send_cache,self.send_cache_enc,self.__location__)
 #	#		return use(keyinfo)
 #	#
 #	#else:
@@ -153,13 +151,14 @@ class TemplateProt(object):
     context = None
     netPass = None
     startTerminal = True
+    __location__ = None
     # change this to default values
     varDir = dict(send_cache=409600, scriptname='template', version='3.0.0')
 
     def __init__(self, location, startTerminal):
-        global __location__
-        __location__ = location
+        self.__location__ = location
         self.injectCommonCode()
+        self.injectSpecificCode()
         self.startTerminal = startTerminal
         self.funcMap = {}  # fill with string:functions pairs
         self.initialize()
@@ -170,22 +169,22 @@ class TemplateProt(object):
             self.serverterminal()
 
     def initialize(self):
-        if not os.path.exists(__location__ + '/resources'): os.makedirs(__location__ + '/resources')
-        if not os.path.exists(__location__ + '/resources/protocols'): os.makedirs(
-            __location__ + '/resources/protocols')  # for protocol scripts
-        if not os.path.exists(__location__ + '/resources/cache'): os.makedirs(
-            __location__ + '/resources/cache')  # used to store info for protocols and client
-        if not os.path.exists(__location__ + '/resources/programparts'): os.makedirs(
-            __location__ + '/resources/programparts')  # for storing protocol files
-        if not os.path.exists(__location__ + '/resources/uploads'): os.makedirs(
-            __location__ + '/resources/uploads')  # used to store files for upload
-        if not os.path.exists(__location__ + '/resources/downloads'): os.makedirs(
-            __location__ + '/resources/downloads')  # used to store downloaded files
-        if not os.path.exists(__location__ + '/resources/networkpass'): os.makedirs(
-            __location__ + '/resources/networkpass')  # contains network passwords
-        self.gen_protlist(__location__)
+        if not os.path.exists(self.__location__ + '/resources'): os.makedirs(self.__location__ + '/resources')
+        if not os.path.exists(self.__location__ + '/resources/protocols'): os.makedirs(
+            self.__location__ + '/resources/protocols')  # for protocol scripts
+        if not os.path.exists(self.__location__ + '/resources/cache'): os.makedirs(
+            self.__location__ + '/resources/cache')  # used to store info for protocols and client
+        if not os.path.exists(self.__location__ + '/resources/programparts'): os.makedirs(
+            self.__location__ + '/resources/programparts')  # for storing protocol files
+        if not os.path.exists(self.__location__ + '/resources/uploads'): os.makedirs(
+            self.__location__ + '/resources/uploads')  # used to store files for upload
+        if not os.path.exists(self.__location__ + '/resources/downloads'): os.makedirs(
+            self.__location__ + '/resources/downloads')  # used to store downloaded files
+        if not os.path.exists(self.__location__ + '/resources/networkpass'): os.makedirs(
+            self.__location__ + '/resources/networkpass')  # contains network passwords
+        self.gen_protlist(self.__location__)
         self.generateContextTLS()
-        self.netPass = self.get_netPass(__location__)
+        self.netPass = self.get_netPass(self.__location__)
         self.init_spec()
         self.run_processes()
 
@@ -196,8 +195,11 @@ class TemplateProt(object):
         self.gen_protlist = CommonCode.gen_protlist
         self.createFileTransferProt = CommonCode.createFileTransferProt
 
+    def injectSpecificCode(self):
+        pass
+
     def generateContextTLS(self):
-        cert_loc = os.path.join(__location__, 'resources/source/certification')
+        cert_loc = os.path.join(self.__location__, 'resources/source/certification')
         self.context = ssl.create_default_context()
         self.context.load_cert_chain(certfile=os.path.join(cert_loc, 'techtem_cert_client.pem'),
                                      keyfile=os.path.join(cert_loc, 'techtem_client_key.pem'))
@@ -206,11 +208,11 @@ class TemplateProt(object):
 
     def init_spec(self):
         # token files start
-        if not os.path.exists(__location__ + '/resources/programparts/%s' % scriptname): os.makedirs(
-            __location__ + '/resources/programparts/%s' % scriptname)
+        if not os.path.exists(self.__location__ + '/resources/programparts/%s' % scriptname): os.makedirs(
+            self.__location__ + '/resources/programparts/%s' % scriptname)
 
-        if not os.path.exists(__location__ + '/resources/programparts/%s/serverlist.txt' % scriptname):
-            with open(__location__ + '/resources/programparts/%s/serverlist.txt' % scriptname, "a") as seeds:
+        if not os.path.exists(self.__location__ + '/resources/programparts/%s/serverlist.txt' % scriptname):
+            with open(self.__location__ + '/resources/programparts/%s/serverlist.txt' % scriptname, "a") as seeds:
                 seeds.write("""####################################################
 ##The format is: ||ip:port||
 ##Files will be sent to and from these servers

@@ -1,4 +1,5 @@
 *.pyc
+resources/protocols/protlist.txt
 resources/programparts/
 resources/source/certification/techtem_server_key.pem
 resources/source/certification/techtem_cert.pem

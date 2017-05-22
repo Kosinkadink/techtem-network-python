@@ -30,13 +30,13 @@ class TemplateServer(CommonCode_Server.TemplateServer):
     requireToken = True
     # change this to default values
     varDict = dict(version='3.0.0', serverport=9015, userport=10015, useConfigPort=True, send_cache=409600,
-                   scriptname='sync', scriptfunction='sync_client', name='sync',
-                   downloadAddrLoc='jedkos.com:9011&&protocols/sync.py')
+                   scriptname='sync', name='sync', downloadAddrIP='jedkos.com:9011',
+                   downloadAddrLoc='protocols/sync.py')
     # form is ip:port&&location/on/filetransferserver/file.py
 
-    def __init__(self, serve=varDict["serverport"],user=varDict["userport"], startUser=True):
+    def __init__(self, location, serve=varDict["serverport"],user=varDict["userport"], startUser=True):
         # self.__location__ = __location__
-        CommonCode_Server.TemplateServer.__init__(self, serve, user, startUser)
+        CommonCode_Server.TemplateServer.__init__(self, location, serve, user, startUser)
         self.funcMap = {
             'sync': self.syncCommand,
             'time': self.timeCommand,
@@ -762,4 +762,4 @@ class TemplateServer(CommonCode_Server.TemplateServer):
 
 
 if __name__ == '__main__':
-    CommonCode_Server.main(sys.argv[1:], TemplateServer)
+    CommonCode_Server.main(sys.argv[1:], TemplateServer, __location__)

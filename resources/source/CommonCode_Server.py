@@ -6,16 +6,14 @@ import ssl, json, ast
 
 import CommonCode
 
-__location__ = None
 
-
-def main(argv, templateServer):
+def main(argv, templateServer, location):
     startRawInput = True
     portS = None
     try:
         opts, args = getopt.getopt(argv, 'tp:', ['port='])
     except getopt.GetoptError:
-        print '-p [port] or --port [port] only'
+        print('-p [port] or --port [port] only')
         quit()
     for opt, arg in opts:
         if opt in ("-p", "--port"):
@@ -24,14 +22,14 @@ def main(argv, templateServer):
             startRawInput = False
 
     if portS is None:
-        templateServer(startUser=startRawInput).start()
+        templateServer(location, startUser=startRawInput).start()
     else:
         try:
             portI = int(portS)
         except ValueError:
-            print 'port must be an integer'
+            print('port must be an integer')
         else:
-            templateServer(portI, startUser=startRawInput).start()
+            templateServer(location, serve=portI, startUser=startRawInput).start()
 
 
 # sort of an abstract class; will not work on its own
@@ -42,14 +40,17 @@ class TemplateServer(object):
     startTime = None
     context = None
     netPass = None
+    __location__ = None
+    protDict = {}
     # change this to default values
     varDict = dict(version='3.0.0', serverport=9999, userport=10999, useConfigPort=True, send_cache=409600,
-                   scriptname=None, name='template',
-                   downloadAddrLoc='jedkos.com:9011&&protocols/template.py')
+                   scriptname=None, name='template', downloadAddrIP='jedkos.com:9011',
+                   downloadAddrLoc='protocols/template.py')
 
     # form is ip:port&&location/on/filetransferserver/file.py
 
-    def __init__(self, serve=varDict["serverport"], user=varDict["userport"], startUser=True):
+    def __init__(self, location, serve=varDict["serverport"], user=varDict["userport"], startUser=True):
+        self.__location__ = location
         self.injectCommonCode()
         if serve is not None:
             self.varDict["useConfigPort"] = False
@@ -57,7 +58,8 @@ class TemplateServer(object):
         self.startUser = startUser
         self.shouldExit = False
         self.funcMap = {}  # fill in with a string key and a function value
-        self.terminalMap = {"exit":self.exit, "clear":self.clear, "info":self.info}
+        self.terminalMap = {"exit": (lambda data: self.exit()), "clear": (lambda data: self.clear()),
+                            "info": (lambda data: self.info())}
 
     def start(self):
         self.run()
@@ -70,7 +72,7 @@ class TemplateServer(object):
             self.start_user_input()
             self.servergen()
         except Exception, e:
-            print str(e)
+            print(str(e))
             self.shouldExit = True
 
     def start_user_input(self):
@@ -106,31 +108,32 @@ class TemplateServer(object):
 
     def initialize(self):
         # make directories if don't exist
-        if not os.path.exists(__location__ + '/resources'): os.makedirs(__location__ + '/resources')
-        if not os.path.exists(__location__ + '/resources/protocols'): os.makedirs(
-            __location__ + '/resources/protocols')  # for protocol scripts
-        if not os.path.exists(__location__ + '/resources/cache'): os.makedirs(
-            __location__ + '/resources/cache')  # used to store info for protocols and client
-        if not os.path.exists(__location__ + '/resources/programparts'): os.makedirs(
-            __location__ + '/resources/programparts')  # for storing protocol files
-        if not os.path.exists(__location__ + '/resources/uploads'): os.makedirs(
-            __location__ + '/resources/uploads')  # used to store files for upload
-        if not os.path.exists(__location__ + '/resources/downloads'): os.makedirs(
-            __location__ + '/resources/downloads')  # used to store downloaded files
-        if not os.path.exists(__location__ + '/resources/networkpass'): os.makedirs(
-            __location__ + '/resources/networkpass')  # contains network passwords
+        print self.__location__
+        if not os.path.exists(self.__location__ + '/resources'): os.makedirs(self.__location__ + '/resources')
+        if not os.path.exists(self.__location__ + '/resources/protocols'): os.makedirs(
+            self.__location__ + '/resources/protocols')  # for protocol scripts
+        if not os.path.exists(self.__location__ + '/resources/cache'): os.makedirs(
+            self.__location__ + '/resources/cache')  # used to store info for protocols and client
+        if not os.path.exists(self.__location__ + '/resources/programparts'): os.makedirs(
+            self.__location__ + '/resources/programparts')  # for storing protocol files
+        if not os.path.exists(self.__location__ + '/resources/uploads'): os.makedirs(
+            self.__location__ + '/resources/uploads')  # used to store files for upload
+        if not os.path.exists(self.__location__ + '/resources/downloads'): os.makedirs(
+            self.__location__ + '/resources/downloads')  # used to store downloaded files
+        if not os.path.exists(self.__location__ + '/resources/networkpass'): os.makedirs(
+            self.__location__ + '/resources/networkpass')  # contains network passwords
         # perform all tasks
-        self.gen_protlist(__location__)
+        self.gen_protlist(self.__location__)
         self.generateContextTLS()
         self.init_spec()
         # config stuff
         self.loadConfig()
-        self.netPass = self.get_netPass(__location__)
+        self.netPass = self.get_netPass(self.__location__)
         self.run_processes()
 
     def loadConfig(self):
         # load config values, or create default file
-        self.varDict = self.config(self.varDict, __location__)
+        self.varDict = self.config(self.varDict, self.__location__)
         # reassign values
         self.varDict["serverport"] = int(self.varDict["serverport"])
         self.varDict["userport"] = int(self.varDict["userport"])
@@ -138,13 +141,15 @@ class TemplateServer(object):
 
     def injectCommonCode(self):
         self.clear = CommonCode.clear
+        self.parse_settings_file = CommonCode.parse_settings_file
         self.get_netPass = CommonCode.get_netPass
         self.gen_protlist = CommonCode.gen_protlist
-        self.createFileTransferProt = CommonCode.createFileTransferProt
         self.config = CommonCode.config
+        self.recv_file = CommonCode.recv_file
+        self.send_file = CommonCode.send_file
 
     def generateContextTLS(self):
-        cert_loc = os.path.join(__location__, 'resources/source/certification')
+        cert_loc = os.path.join(self.__location__, 'resources/source/certification')
         self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         self.context.load_cert_chain(certfile=os.path.join(cert_loc, 'techtem_cert.pem'),
                                      keyfile=os.path.join(cert_loc, 'techtem_server_key.pem'))
@@ -153,14 +158,22 @@ class TemplateServer(object):
 
     def init_spec(self):
         # insert application-specific initialization code here
-        if not os.path.exists(__location__ + '/resources/programparts/%s' % self.varDict["name"]):
-            os.makedirs(__location__ + '/resources/programparts/%s' % self.varDict["name"])
+        if not os.path.exists(self.__location__ + '/resources/programparts/%s' % self.varDict["name"]):
+            os.makedirs(self.__location__ + '/resources/programparts/%s' % self.varDict["name"])
+        self.init_spec_extra()
+
+    def init_spec_extra(self):
+        pass
 
     def serverterminal(self, inp):  # used for server commands
-        try:
-            self.terminalMap[inp]()
-        except KeyError,e:
+        user_inp = inp.split()
+        if not user_inp:
             pass
+        try:
+            self.terminalMap[user_inp[0]](user_inp)
+        except KeyError, e:
+            print str(e)
+            print("ERROR: terminal command {} is not recognized".format(user_inp[0]))
 
     def info(self):  # display current configuration
         print("INFORMATION:")
@@ -170,14 +183,21 @@ class TemplateServer(object):
         print("userport: %s" % self.varDict["userport"])
         print("send_cache: %s" % self.varDict["send_cache"])
         print("scriptname: %s" % self.varDict["scriptname"])
-        print("scriptfunction: %s" % self.varDict["scriptfunction"])
+        print("downloadAddrIP: %s" % self.varDict["downloadAddrIP"])
         print("downloadAddrLoc: %s" % self.varDict["downloadAddrLoc"])
         print("")
 
+    def exit(self):
+        self.shouldExit = True
+        self.cleanProcesses()
+
+    def cleanProcesses(selfs):
+        pass
+
     def servergen(self, repeatFunc=None):
-        print '%s server started - version %s on port %s\n' % (
-            self.varDict["name"], self.varDict["version"], self.varDict["serverport"])
-        self.get_netPass(__location__)
+        print('%s server started - version %s on port %s\n' % (
+            self.varDict["name"], self.varDict["version"], self.varDict["serverport"]))
+        self.get_netPass(self.__location__)
         # create a socket object
         serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socketlist = []
@@ -192,7 +212,7 @@ class TemplateServer(object):
             serversocket.bind((host, port))
             userinput.bind((host, userport))
         except Exception, e:
-            print str(e)
+            print(str(e))
             self.shouldExit = True
 
         # queue up to 10 requests
@@ -258,11 +278,15 @@ class TemplateServer(object):
         if readyToGo:
             conn_resp = json.dumps(responses)
             s.sendall(conn_resp)
-            func(s)
+            if conn_req["data"] is None:
+                func(s)
+            else:
+                func(s, conn_req["data"])
         # otherwise send info back
         else:
             responses["status"] = 400
             responses["msg"] = "BAD"
+            responses["downloadAddrIP"] = self.varDict["downloadAddrIP"]
             responses["downloadAddrLoc"] = self.varDict["downloadAddrLoc"]
             conn_resp = json.dumps(responses)
             s.sendall(conn_resp)

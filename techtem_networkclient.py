@@ -7,80 +7,28 @@ __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))  # directory from which this script is ran
 if os.name == 'nt':
     __location__ = __location__.replace('\\', '/')
-sys.path.insert(0, os.path.join(__location__, 'resources/source/'))
 
 # import common code
-import CommonCode
-import CommonCode_Client
+import resources.source.CommonCode_Client as CommonCode_Client
 
 
-class NetworkClient(object):
+class NetworkClient(CommonCode_Client.TemplateProt):
     netPass = None
     threads = []
     serverport = None
     serverports = None
+    varDict = dict(send_cache=409600, scriptname='network_client', version='3.0.0')
 
-    varDict = dict(send_cache=409600, version="3.0.0")
+    def __init__(self, location, startTerminal=True):
+        CommonCode_Client.TemplateProt.__init__(self, location, startTerminal)
 
-#    class ClientObject(object):
-#        location = None
-#        data = None
-#        send_cache = None  # data send cache for non-encrypted connection
-#        s = None  # socket connection
-#
-#        def __init__(self, s, data, send_cache, send_cache_enc, location):
-#            self.s = s
-#            self.data = data
-#            self.send_cache = send_cache
-#            self.location = location
-
-    def __init__(self):
-        self.initialize()
-
-    def run_processes(self):
-        self.serverterminal()
-
-    def initialize(self):
-        if not os.path.exists(__location__ + '/resources'): os.makedirs(__location__ + '/resources')
-        if not os.path.exists(__location__ + '/resources/source'): os.makedirs(
-            __location__ + '/resources/source')  # stores common code
-        if not os.path.exists(__location__ + '/resources/protocols'): os.makedirs(
-            __location__ + '/resources/protocols')  # for protocol scripts
-        if not os.path.exists(__location__ + '/resources/cache'): os.makedirs(
-            __location__ + '/resources/cache')  # used to store info for protocols and client
-        if not os.path.exists(__location__ + '/resources/programparts'): os.makedirs(
-            __location__ + '/resources/programparts')  # for storing protocol files
-        if not os.path.exists(__location__ + '/resources/uploads'): os.makedirs(
-            __location__ + '/resources/uploads')  # used to store files for upload
-        if not os.path.exists(__location__ + '/resources/downloads'): os.makedirs(
-            __location__ + '/resources/downloads')  # used to store downloaded files
-        if not os.path.exists(__location__ + '/resources/networkpass'): os.makedirs(
-            __location__ + '/resources/networkpass')  # contains network passwords
-        self.injectCommonCode()
-        self.createFileTransferProt(__location__)
-        self.netPass = self.get_netPass(__location__)
-        self.gen_protlist(__location__)
-        self.init_spec()
-        self.run_processes()
-
-    def injectCommonCode(self):
-        CommonCode_Client.__location__ = __location__
-        self.clear = CommonCode.clear
-        self.connectip = CommonCode_Client.connectip_netclient
-        self.get_netPass = CommonCode.get_netPass
-        self.gen_protlist = CommonCode.gen_protlist
-        self.netPass_check = CommonCode.netPass_check
-        self.createFileTransferProt = CommonCode.createFileTransferProt
-
-    def init_spec(self):
-        # name files start
-        if not os.path.exists(__location__ + '/resources/programparts/name'): os.makedirs(
-            __location__ + '/resources/programparts/name')
-        if not os.path.exists(__location__ + '/resources/programparts/name/nameservers.txt'):
-            with open(__location__ + '/resources/programparts/name/nameservers.txt',
-                      "a") as makeprot:  # file used for listing network name servers for /connect functionality
-                makeprot.write("")
-            # name files end
+    def set_terminalMap(self):
+        self.terminalMap = {"exit": (lambda data: self.exit()), "clear": (lambda data: self.boot()),
+                            "connect": (lambda data: self.termConnectCommand(data[1:])),
+                            "dconnect": (lambda data: self.termDconnectCommand(data[1], data[2:])),
+                            "start": (lambda data: self.startStandalone(data[1])),
+                            "prots": (lambda data: self.printProts()),
+                            "help": (lambda data: self.help())}
 
     def boot(self):
         self.clear()
@@ -99,50 +47,6 @@ class NetworkClient(object):
         print "exit OR leave: exits gracefully"
         print "help OR ?: displays this menu"
 
-    def serverterminal(self):
-        self.boot()
-        while 1:
-            inp = raw_input(">")
-            try:
-                if inp:
-                    if inp.split()[0] == 'connect':
-                        try:
-                            data = inp.split()[1:]
-                        except:
-                            print 'connect command requires at least 1 argument; 0 provided'
-                        else:
-                            print self.termConnectCommand(data)
-
-                    elif inp.split()[0] == 'dconnect':
-                        try:
-                            ip = inp.split()[1]
-                            data = inp.split()[2:]
-                        except:
-                            'dconnect command requires at least 2 arguments; less provided'
-                        else:
-                            print self.termDconnectCommand(ip, data)
-                    elif inp.split()[0] == 'start':
-                        try:
-                            data = inp.split()[1:]
-                        except:
-                            data = None
-                        print self.startstandalone(data)
-                    elif inp.split()[0] == 'reload':
-                        self.gen_protlist()
-                        print 'protocols list reloaded'
-                    elif inp.split()[0] == 'prots':
-                        self.printProts()
-                    elif inp.split()[0] == 'quit' or inp.split()[0] == 'leave' or inp.split()[0] == 'exit':
-                        self.exit()
-                    elif inp.split()[0] == 'clear':
-                        self.boot()
-                    elif inp.split()[0] == 'help' or inp.split()[0] == '?':
-                        self.help()
-                    else:
-                        print "Invalid command"
-            except Exception, e:
-                print str(e)
-
     def printProts(self):
         with open(__location__ + '/resources/protocols/protlist.txt') as protlist:
             for scriptname in protlist:
@@ -150,16 +54,16 @@ class NetworkClient(object):
                     scriptname = scriptname[:-1]
                 script = sys.modules[scriptname]
                 try:
-                    isAlone = getattr(script, 'standalone')
+                    isAlone = getattr(script.TemplateProt, 'standalone')
                 except Exception, e:
                     isAlone = 'Unknown'
                 try:
-                    variables = getattr(script, 'variables')
+                    variables = getattr(script.TemplateProt, 'default_vars')
                 except Exception, e:
                     variables = 'Unknown'
                 print '%s --> standalone=%s, input=%s' % (scriptname, str(isAlone), str(variables))
 
-    def startstandalone(self, data):  # used to start protocols not requiring connection
+    def startStandalone(self, data):  # used to start protocols not requiring connection
 
         try:
             scriptname = data[0]
@@ -220,13 +124,13 @@ class NetworkClient(object):
                     confirm = self.confirmDownload(receivedip, need, downloc)
                     if not confirm:
                         return """Download aborted. Client requires script '%s' of version '%s' to connect to this server; client does not posses the script""" % (
-                        scriptname, scriptversion)
+                            scriptname, scriptversion)
                     print 'Download confirmed'
                     protdownload = self.downloadProt(downloc)
                     print protdownload
                     if protdownload != '111':
                         return """File not found on designated file server. Client requires script '%s' of version '%s' to connect to this server; client does not posses the script""" % (
-                        scriptname, scriptversion)
+                            scriptname, scriptversion)
                     self.gen_protlist()
                     with open(__location__ + '/resources/protocols/protlist.txt') as protlist:
                         for line in protlist:
@@ -234,10 +138,10 @@ class NetworkClient(object):
                                 compat = True
                     if not compat:
                         return """Client requires script '%s' of version '%s' to connect to this server; client does not posses the script""" % (
-                        scriptname, scriptversion)
+                            scriptname, scriptversion)
                 else:
                     return """Client requires script '%s' of version '%s' to connect to this server; client does not posses the script""" % (
-                    scriptname, scriptversion)
+                        scriptname, scriptversion)
 
             script = sys.modules[scriptname]
             preversion = getattr(script, 'version')
@@ -245,7 +149,7 @@ class NetworkClient(object):
                 return self.connectip(self, receivedip, data, '%s:%s:%s' % (scriptname, function, scriptversion))
             else:
                 return """Client requires script '%s' of version '%s' to connect to this server; client has wrong version '%s'""" % (
-                scriptname, scriptversion, preversion)
+                    scriptname, scriptversion, preversion)
         else:
             return 'Communication complete'
 
@@ -264,28 +168,31 @@ class NetworkClient(object):
     def confirmDownload(self, receivedip, need, downloc):
         confirm = raw_input(
             'Server at %s points at %s to download the nessecary protocol %s. Proceed with download?\n>> ' % (
-            receivedip, downloc.split('&&')[0], need))
+                receivedip, downloc.split('&&')[0], need))
         if confirm.lower() == 'y':
             return True
         return False
 
-    def makenameconnection(self, data):
-        with open(__location__ + '/resources/programparts/name/nameservers.txt', "r") as nservelist:
-            for line in nservelist:
-                if line.startswith('||'):
-                    try:
-                        host = line.split('||')[1].split(':')[0]
-                        port = line.split('||')[1].split(':')[1]
-                        ip = '%s:%s' % (host, port)
-                        scriptname = 'name'
-                        script = sys.modules[scriptname]
-                        function = getattr(script, 'clientfunction')
-                        scriptversion = getattr(script, 'version')
-                        command = '%s:%s:%s' % (scriptname, function, scriptversion)
-                        return self.connectip(self, ip, data, command)
-                    except Exception, e:
-                        print e
-            return "None of the listed name servers could be reached"
+    def makenameconnecton(self, data):
+        nameservers = self.parse_settings_file(os.path.join(__location__ ,'resources/programparts/name/nameservers.txt'))
+
+    # def makenameconnection(self, data):
+    #     with open(__location__ + '/resources/programparts/name/nameservers.txt', "r") as nservelist:
+    #         for line in nservelist:
+    #             if line.startswith('||'):
+    #                 try:
+    #                     host = line.split('||')[1].split(':')[0]
+    #                     port = line.split('||')[1].split(':')[1]
+    #                     ip = '%s:%s' % (host, port)
+    #                     scriptname = 'name'
+    #                     script = sys.modules[scriptname]
+    #                     function = getattr(script, 'clientfunction')
+    #                     scriptversion = getattr(script, 'version')
+    #                     command = '%s:%s:%s' % (scriptname, function, scriptversion)
+    #                     return self.connectip(self, ip, data, command)
+    #                 except Exception, e:
+    #                     print e
+    #         return "None of the listed name servers could be reached"
 
     def clear(self):  # clear screen, typical way
         if os.name == 'nt':
@@ -298,4 +205,4 @@ class NetworkClient(object):
 
 
 if __name__ == '__main__':
-    program = NetworkClient()
+    program = NetworkClient(__location__)

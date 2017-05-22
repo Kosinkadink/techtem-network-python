@@ -75,11 +75,84 @@ def selectTem(read_list, write_list, error_list, timeout):
     return ready_read, ready_write, have_error
 
 
+def normalize_path(path):
+    if os.name == 'nt':
+        path = path.replace('\\', '/')
+    return path
+
+
+def parse_settings_file(location):
+    parsed = []
+    with open(location, "rb") as settings:
+        for line in settings:
+            if not line.startswith("#"):
+                parsed.append(line.strip().split('|'))
+    return parsed
+
+
 def clear():  # clear screen, typical way
     if os.name == 'nt':
         os.system('cls')
     else:
         os.system('clear')
+
+
+def recv_file(s, file_path, file_name, send_cache):
+    # get size of file
+    file_length = int(s.recv(16).strip())
+
+    with open(file_path, 'wb') as f:
+        print("{} receiving...".format(file_name))
+        received = 0
+        while file_length > received:
+            # print progress of download, ignore if cannot display
+            try:
+                sys.stdout.write(
+                    str((float(received) / file_length) * 100)[:4] + '%   ' + str(received) + '/' + str(file_length) + ' B\r')
+                sys.stdout.flush()
+            except:
+                pass
+            data = s.recv(send_cache)
+            if not data:
+                break
+            received += len(data)
+            f.write(data)
+    # send heartbeat
+    s.sendall("ok")
+    sys.stdout.write('100.0%   ' + str(received) + '/' + str(file_length) + ' B\n')
+    print("{} receiving successful".format(file_name))
+    # return metadata
+    return {"status": 200, "msg": "OK"}
+
+
+def send_file(s, file_path, file_name, send_cache):
+    # get size of file to be sent
+    file_length = os.path.getsize(file_path)
+    # send size of file
+    s.sendall("%16d" % file_length)
+    # open file and send it
+    with open(file_path, 'rb') as f:
+        print("{} sending...".format(file_name))
+        sent = 0
+        while file_length > sent:
+            # print progress of upload, ignore if cannot display
+            try:
+                sys.stdout.write(
+                    str((float(sent) / file_length) * 100)[:4] + '%   ' + str(sent) + '/' + str(file_length) + ' B\r')
+                sys.stdout.flush()
+            except:
+                pass
+            data = f.read(send_cache)
+            s.sendall(data)
+            if not data:
+                break
+            sent += len(data)
+    # get heartbeat
+    s.recv(2)
+    sys.stdout.write('100.0%   ' + str(sent) + '/' + str(file_length) + ' B\n')
+    print("{} sending successful".format(file_name))
+    # return metadata
+    return {"status": 200, "msg": "OK"}
 
 
 def gen_protlist(__location__):
@@ -157,86 +230,3 @@ def config(varDic, __location__):
             varDic['serverport'] = oldPort
 
     return varDic
-
-
-##AUTO FILE TRANSFER
-def createFileTransferProt(__location__):
-    if not os.path.exists(__location__ + '/resources/protocols/filetransfer.py'):
-        with open(__location__ + '/resources/protocols/filetransfer.py', "wb") as makeprot:
-            makeprot.write("""#!/usr/bin/python2
-import socket, os, sys
-from time import sleep
-
-variables = ['filename']
-standalone = False
-version = '3.0.0'
-clientfunction = 'filetransfer_client'
-serverfunction = None
-
-def filetransfer_client(cliObj):
-
-    s = cliObj.s
-    data = cliObj.data
-
-    s.send('fileget')
-    s.recv(2)
-    filename = data[0]
-    
-    status = file_recv_file(filename,cliObj)
-    s.close
-    return status
-
-    #s.sendall('end\\n')
-
-def file_recv_file(filename,cliObj): #receives files from master
-    
-    ################################
-    s = cliObj.s
-    sendTem = cliObj.sendTem
-    recvTem = cliObj.recvTem
-    AESkey = cliObj.AESkey
-    send_cache = cliObj.send_cache
-    send_cache_enc = cliObj.send_cache_enc
-    location = cliObj.location
-    ################################
-    filereq = filename.split('::')
-    sendTem(s,filereq[0],AESkey)
-
-    if len(filereq) > 1:
-        downloadslocation = filereq[1]
-    else:
-        downloadslocation = '/resources/downloads/'
-    downloadslocation = location + downloadslocation
-
-    filename = filereq[0].split('/')[-1]
-    print filename
-
-    has = s.recv(2)
-    if has != 'ok':
-        return '404'
-    else:
-        s.sendall('ok')
-        file_cache = recvTem(s,16,AESkey)
-        file_cache = int(file_cache.strip())
-        s.sendall('ok')
-        size = recvTem(s,16,AESkey)
-        size = int(size.strip())
-        recvd = 0
-        print filename + ' download in progress...'
-        if not os.path.exists(downloadslocation):
-            os.makedirs(downloadslocation)
-        q = open(os.path.join(downloadslocation, filename), 'wb')
-        while size > recvd:
-            sys.stdout.write(str((float(recvd)/size)*100)[:4]+ '%' + '\\r')
-            sys.stdout.flush()
-            data = recvTem(s,file_cache,AESkey)
-            if not data: 
-                break
-            recvd += len(data)
-            q.write(data)
-        s.sendall('ok')
-        q.close()
-        sys.stdout.write('100.0%\\n')
-        print filename + ' download complete'
-        return '111'
-        """)

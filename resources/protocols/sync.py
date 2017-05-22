@@ -9,7 +9,6 @@ common_location = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))  # directory from which this script is ran
 main_dir = os.path.realpath(os.path.join(common_location, '..'))
 sys.path.insert(0, os.path.join(main_dir, 'source/'))
-import CommonCode
 import CommonCode_Client
 
 # universal variables
@@ -50,13 +49,15 @@ class SyncClient(CommonCode_Client.TemplateProt):
             # now do server terminal
             self.serverterminal()
 
-    def init_spec(self):
+    def set_funcMap(self):
         self.funcMap = {
             'sync': self.syncCommand,
             'time': self.timeCommand,
             'newuser': self.newUserCommand,
             'checkauth': self.checkAuthCommand
         }
+
+    def init_spec(self):
 
         # sync files start
         if not os.path.exists(__location__ + '/resources/programparts/sync'): os.makedirs(

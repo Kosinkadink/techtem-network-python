@@ -6,10 +6,9 @@ __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))  # directory from which this script is ran
 if os.name == 'nt':
     __location__ = __location__.replace('\\', '/')
-sys.path.insert(0, os.path.join(__location__, 'resources/source/'))
 
 # import common code
-import CommonCode_Server
+import resources.source.CommonCode_Server as CommonCode_Server
 
 
 class TemplateServer(CommonCode_Server.TemplateServer):

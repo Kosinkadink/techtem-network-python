@@ -12,18 +12,18 @@ sys.path.insert(0, os.path.join(main_dir, 'source/'))
 import CommonCode_Client
 
 # universal variables
-variables = []
-standalone = True
-version = '3.0.0'
-standalonefunction = 'standalone_function'
-__location__ = None
-clientfunction = None
-serverfunction = 'server_function'
+# variables = []
+# standalone = True
+# version = '3.0.0'
+# standalonefunction = 'standalone_function'
+# __location__ = None
+# clientfunction = None
+# serverfunction = 'server_function'
 
 
 # script-specific variables
 
-class SyncClient(CommonCode_Client.TemplateProt):
+class TemplateProt(CommonCode_Client.TemplateProt):
     # don't change this
     threads = []
     doAutoSync = False  # toggled by user
@@ -32,11 +32,10 @@ class SyncClient(CommonCode_Client.TemplateProt):
     preferredSumType = 'time'
     continueRunning = True
     # change this for client
-    varDict = dict(send_cache=409600, scriptname='sync', scriptfunction='sync_client', version='3.0.0')
+    standalone = True
+    varDict = dict(send_cache=409600, scriptname='sync', version='3.0.0')
 
     def __init__(self, location, startTerminal):
-        global __location__
-        __location__ = location
         CommonCode_Client.TemplateProt.__init__(self, location, startTerminal)
 
     def run_processes(self):
@@ -57,20 +56,14 @@ class SyncClient(CommonCode_Client.TemplateProt):
             'checkauth': self.checkAuthCommand
         }
 
-    def init_spec(self):
-
-        # sync files start
-        if not os.path.exists(__location__ + '/resources/programparts/sync'): os.makedirs(
-            __location__ + '/resources/programparts/sync')
-
-        if not os.path.exists(__location__ + '/resources/programparts/sync/serverlist.txt'):
-            with open(__location__ + '/resources/programparts/sync/serverlist.txt', "a") as seeds:
+    def init_spec_extra(self):
+        if not os.path.exists(self.__location__ + '/resources/programparts/sync/serverlist.txt'):
+            with open(self.__location__ + '/resources/programparts/sync/serverlist.txt', "a") as seeds:
                 seeds.write("""####################################################
-##The format is: ||ip:port||
-##Files will be sent to and from these servers
-##Only lines starting with || will be read
+# The format is: ip:port|next:one
+# Files will be sent to and from these servers
+# Only lines NOT starting with # will be read
 ####################################################""")
-                # sync files end
 
     def boot(self):
         self.clear()
@@ -91,46 +84,58 @@ class SyncClient(CommonCode_Client.TemplateProt):
         print "autosync OR auto: toggle autosync status"
         print "interval OR int + number: set interval in seconds between autosync attempts"
 
+    def set_terminalMap(self):
+        self.terminalMap["autosync"] = (lambda data: self.toggleAutoSync())
+        self.terminalMap["interval"] = (lambda data: self.setSyncInterval(data[1]))
+        self.terminalMap["time"] = (lambda data: self.connectTime())
+        self.terminalMap["login"]  = (lambda data: self.loginAsOther())
+        self.terminalMap["newacc"] = (lambda data: self.connectCreateNew())
+        self.terminalMap["check"] = (lambda data: self.loginAsOther())
+        self.terminalMap["createsync"] = (lambda data: self.createSyncState())
+        self.terminalMap["sync"] = (lambda data: self.connectSync())
+        self.terminalMap["size"] = (lambda data: self.checkSize())
+        self.terminalMap["sum"] = (lambda data: self.checkChecksum(data[1]))
+
     # function for client splash screen
-    def serverterminal(self):
-        self.boot()
-        while True:
-            inp = raw_input(">")
-            try:
-                if inp:
-                    if inp.split()[0] == 'quit' or inp.split()[0] == 'leave' or inp.split()[0] == 'exit':
-                        break
-                    elif inp.split()[0] == 'clear':
-                        self.boot()
-                    elif inp.split()[0] in ['autosync', 'auto']:
-                        self.toggleAutoSync()
-                    elif inp.split()[0] in ['interval', 'int']:
-                        self.setSyncInterval(inp)
-                    elif inp.split()[0] == 'time':
-                        print self.connectTime()
-                    elif inp.split()[0] == 'help' or inp.split()[0] == '?':
-                        self.help()
-                    elif inp.split()[0] == 'login':
-                        self.loginAsOther()
-                    elif inp.split()[0] == 'newacc':
-                        self.connectCreateNew()
-                    elif inp.split()[0] == 'check':
-                        self.loginAsOther()
-                    elif inp.split()[0] == 'createsync':
-                        self.createSyncState()
-                    elif inp.split()[0] == 'sync':
-                        self.connectSync()
-                    elif inp.split()[0] == 'size':
-                        self.checkSize()
-                    elif inp.split()[0] == 'sum':
-                        self.checkChecksum(inp.split()[1])
-                    elif inp.split()[0] == 'netpass':
-                        self.get_netPass()
-                        print self.netPass
-                    else:
-                        print "Invalid command"
-            except Exception, e:
-                print str(e)
+    # def serverterminal(self):
+    #     self.boot()
+    #     while True:
+    #         inp = raw_input(">")
+    #         try:
+    #             if inp:
+    #                 if inp.split()[0] == 'quit' or inp.split()[0] == 'leave' or inp.split()[0] == 'exit':
+    #                     break
+    #                 elif inp.split()[0] == 'clear':
+    #                     self.boot()
+    #                 elif inp.split()[0] in ['autosync', 'auto']:
+    #                     self.toggleAutoSync()
+    #                 elif inp.split()[0] in ['interval', 'int']:
+    #                     self.setSyncInterval(inp)
+    #                 elif inp.split()[0] == 'time':
+    #                     print self.connectTime()
+    #                 elif inp.split()[0] == 'help' or inp.split()[0] == '?':
+    #                     self.help()
+    #                 elif inp.split()[0] == 'login':
+    #                     self.loginAsOther()
+    #                 elif inp.split()[0] == 'newacc':
+    #                     self.connectCreateNew()
+    #                 elif inp.split()[0] == 'check':
+    #                     self.loginAsOther()
+    #                 elif inp.split()[0] == 'createsync':
+    #                     self.createSyncState()
+    #                 elif inp.split()[0] == 'sync':
+    #                     self.connectSync()
+    #                 elif inp.split()[0] == 'size':
+    #                     self.checkSize()
+    #                 elif inp.split()[0] == 'sum':
+    #                     self.checkChecksum(inp.split()[1])
+    #                 elif inp.split()[0] == 'netpass':
+    #                     self.get_netPass()
+    #                     print self.netPass
+    #                 else:
+    #                     print "Invalid command"
+    #         except Exception, e:
+    #             print str(e)
 
     def setSyncInterval(self, inp):
         try:
@@ -154,7 +159,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
         self.login()
         try:
             start = time()
-            print self.sizeDir(__location__ + '/resources/programparts/sync/%s' % self.username.lower())
+            print self.sizeDir(self.__location__ + '/resources/programparts/sync/%s' % self.username.lower())
             end = time()
             print str(end - start)
         except Exception, e:
@@ -162,13 +167,13 @@ class SyncClient(CommonCode_Client.TemplateProt):
 
     def userSize(self, username):
         self.login()
-        return str(self.sizeDir(__location__ + '/resources/programparts/sync/%s' % self.username.lower()))
+        return str(self.sizeDir(self.__location__ + '/resources/programparts/sync/%s' % self.username.lower()))
 
     def checkChecksum(self, type):
         self.login()
         try:
             start = time()
-            list = self.checksumList(__location__ + '/resources/programparts/sync/%s' % self.username.lower(), type)
+            list = self.checksumList(self.__location__ + '/resources/programparts/sync/%s' % self.username.lower(), type)
             end = time()
             print list
             print str(end - start)
@@ -181,24 +186,24 @@ class SyncClient(CommonCode_Client.TemplateProt):
             if not valid:
                 raise ValueError("authentication error")
             username = self.username
-            if not os.path.exists(__location__ + '/resources/programparts/sync/%s' % username):
-                os.makedirs(__location__ + '/resources/programparts/sync/%s' % username)
-                with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username, "a") as timedoc:
+            if not os.path.exists(self.__location__ + '/resources/programparts/sync/%s' % username):
+                os.makedirs(self.__location__ + '/resources/programparts/sync/%s' % username)
+                with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username, "a") as timedoc:
                     timedoc.write("""00000000000000""")
             else:
-                if not os.path.exists(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username):
-                    with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
+                if not os.path.exists(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username):
+                    with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
                               "a") as timedoc:
                         timedoc.write("""00000000000000""")
                 else:
-                    os.remove(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username)
+                    os.remove(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username)
                     timestamp = self.connectTime()
-                    with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
+                    with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
                               "a") as timedoc:
                         timedoc.write(timestamp)
             print 'Creating sync state...'
-            with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username, "a") as timedoc:
-                list = self.checksumList(__location__ + '/resources/programparts/sync/%s' % username.lower(),
+            with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username, "a") as timedoc:
+                list = self.checksumList(self.__location__ + '/resources/programparts/sync/%s' % username.lower(),
                                          self.preferredSumType)
                 for item in list:
                     timedoc.write('\n' + item)
@@ -218,13 +223,13 @@ class SyncClient(CommonCode_Client.TemplateProt):
             # if not valid:
             #	return
             username = self.username
-            if not os.path.exists(__location__ + '/resources/programparts/sync/%s' % username):
-                os.makedirs(__location__ + '/resources/programparts/sync/%s' % username)
-                with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username, "a") as timedoc:
+            if not os.path.exists(self.__location__ + '/resources/programparts/sync/%s' % username):
+                os.makedirs(self.__location__ + '/resources/programparts/sync/%s' % username)
+                with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username, "a") as timedoc:
                     timedoc.write("""00000000000000""")
             else:
-                if not os.path.exists(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username):
-                    with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
+                if not os.path.exists(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username):
+                    with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
                               "a") as timedoc:
                         timedoc.write("""00000000000000""")
             dirSize = self.userSize(username)
@@ -319,7 +324,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
                 if os.name == 'nt':
                     itempath = itempath.replace('\\', '/')
                 if os.path.isfile(itempath):
-                    gene = itempath.split(__location__ + '/resources/programparts/sync/%s/' % username)[1:]
+                    gene = itempath.split(self.__location__ + '/resources/programparts/sync/%s/' % username)[1:]
                     listLength = len(gene)
                     if listLength > 1:
                         actual = ''
@@ -342,7 +347,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
                 if os.name == 'nt':
                     itempath = itempath.replace('\\', '/')
                 if os.path.isfile(itempath):
-                    gene = itempath.split(__location__ + '/resources/programparts/sync/%s/' % username)[1:]
+                    gene = itempath.split(self.__location__ + '/resources/programparts/sync/%s/' % username)[1:]
                     listLength = len(gene)
                     if listLength > 1:
                         actual = ''
@@ -350,7 +355,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
                         while number < listLength:
                             actual += gene[number]
                             if (number + 1) != listLength:
-                                actual += __location__ + '/resources/programparts/sync/%s/' % username
+                                actual += self.__location__ + '/resources/programparts/sync/%s/' % username
                     else:
                         actual = gene[0]
                     checksumlist += [actual + self.checksum2(itempath)]
@@ -364,7 +369,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
                 if os.name == 'nt':
                     itempath = itempath.replace('\\', '/')
                 if os.path.isfile(itempath):
-                    gene = itempath.split(__location__ + '/resources/programparts/sync/%s/' % username)[1:]
+                    gene = itempath.split(self.__location__ + '/resources/programparts/sync/%s/' % username)[1:]
                     listLength = len(gene)
                     if listLength > 1:
                         actual = ''
@@ -372,7 +377,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
                         while number < listLength:
                             actual += gene[number]
                             if (number + 1) != listLength:
-                                actual += __location__ + '/resources/programparts/sync/%s/' % username
+                                actual += self.__location__ + '/resources/programparts/sync/%s/' % username
                     else:
                         actual = gene[0]
                     checksumlist += [actual + self.checkmoddate(itempath)]
@@ -489,7 +494,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
         return time
 
     def connectToServer(self, data, command):
-        with open(__location__ + '/resources/programparts/sync/serverlist.txt', "r") as seeds:
+        with open(self.__location__ + '/resources/programparts/sync/serverlist.txt', "r") as seeds:
             for line in seeds:
                 if line.startswith('||'):
                     # try: #connect to ip, save data, issue command
@@ -506,7 +511,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
 
         file_name = gene.split('/')[-1]
 
-        file = __location__ + '/resources/programparts/sync/%s/' % username + gene
+        file = self.__location__ + '/resources/programparts/sync/%s/' % username + gene
 
         # print os.path.join(uploads, file_name)
         print file
@@ -546,11 +551,11 @@ class SyncClient(CommonCode_Client.TemplateProt):
 
     def sendTimestamp(self, s):  # send file to seed
         username = self.username
-        data = __location__ + '/resources/programparts/sync/%s/timestamp.txt' % username
+        data = self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username
         if os.name == 'nt':
             data = data.replace('\\', '/')
         print 'sending data'
-        dataloc = __location__
+        dataloc = self.__location__
         if os.name == 'nt':
             dataloc = dataloc.replace('\\', '/')
         s.sendall(dataloc + '/resources/programparts/sync/%s/timestampclient.txt' % username)
@@ -559,7 +564,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
 
         file = data
 
-        uploads = __location__ + '/resources/uploads/'
+        uploads = self.__location__ + '/resources/uploads/'
 
         file_name = data.split('/')[-1]
 
@@ -600,7 +605,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
 
     def sendCommand(self, s, data):  # send sync files to server
         username = self.username
-        folder = __location__ + '/resources/programparts/sync/%s/' % username
+        folder = self.__location__ + '/resources/programparts/sync/%s/' % username
 
         if data == 'sync':
             filessent = self.sendSyncFiles(s, folder)
@@ -667,12 +672,12 @@ class SyncClient(CommonCode_Client.TemplateProt):
         username = self.username
         self.recvSpecFiles(s)
         files = []
-        with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username, 'rb') as timedoc:
+        with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username, 'rb') as timedoc:
             for line in timedoc:
                 files += [line]
         files = files[1:]
         # print files
-        folder = __location__ + '/resources/programparts/sync/%s/' % username
+        folder = self.__location__ + '/resources/programparts/sync/%s/' % username
         if os.name == 'nt':
             folder = folder.replace('\\', '/')
 
@@ -697,7 +702,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
         s.sendall('ok')
         files = self.recv_file_list(s)
         files = files.split('@%$%@')[1:-1]
-        folder = __location__ + '/resources/programparts/sync/%s/' % username
+        folder = self.__location__ + '/resources/programparts/sync/%s/' % username
         print folder
         if os.name == 'nt':
             folder = folder.replace('\\', '/')
@@ -707,7 +712,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
             splitfile = file.split('/resources/programparts/sync/%s/' % username)[1]
             localfiles += [folder + splitfile]
         print localfiles
-        print 'location: %s' % __location__
+        print 'location: %s' % self.__location__
         print 'folder: %s' % folder
         self.removeUnsyncedFiles(s, folder, localfiles)
 
@@ -756,7 +761,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
         for file in filelocpre:
             fileloc += file + '/'
 
-        downloadslocation = __location__ + '/resources/programparts/sync/%s/' % username + fileloc
+        downloadslocation = self.__location__ + '/resources/programparts/sync/%s/' % username + fileloc
 
         has = s.recv(2)
         if has != 'ok':
@@ -830,7 +835,7 @@ class SyncClient(CommonCode_Client.TemplateProt):
         valid = self.checkAuthCommand(s, data)
         if not valid:
             return "authentication error"
-        # with open(__location__+'/resources/programparts/sync/%s/timestamp.txt' % username, "rb") as timedoc:
+        # with open(self.__location__+'/resources/programparts/sync/%s/timestamp.txt' % username, "rb") as timedoc:
         #	timestamp = timedoc.readline()
 
         available = self.isAvailable(s)
@@ -907,14 +912,14 @@ class SyncClient(CommonCode_Client.TemplateProt):
                         return
 
                 print 'Account created.'
-                if not os.path.exists(__location__ + '/resources/programparts/sync/%s' % username):
-                    os.makedirs(__location__ + '/resources/programparts/sync/%s' % username)
-                    with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
+                if not os.path.exists(self.__location__ + '/resources/programparts/sync/%s' % username):
+                    os.makedirs(self.__location__ + '/resources/programparts/sync/%s' % username)
+                    with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
                               "a") as timedoc:
                         timedoc.write("""00000000000000""")
                 else:
-                    if not os.path.exists(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username):
-                        with open(__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
+                    if not os.path.exists(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username):
+                        with open(self.__location__ + '/resources/programparts/sync/%s/timestamp.txt' % username,
                                   "a") as timedoc:
                             timedoc.write("""00000000000000""")
             else:
@@ -929,9 +934,6 @@ class SyncClient(CommonCode_Client.TemplateProt):
         time = s.recv(128)
         return time
 
-    def exit(self):
-        quit()
-
     def autoSyncThread(self):
         while (self.continueRunning):
             if (self.doAutoSync and self.isSyncing != True and self.username != None and self.password != None):
@@ -942,12 +944,3 @@ class SyncClient(CommonCode_Client.TemplateProt):
                 sleep(self.syncInterval)
             else:
                 sleep(10)
-
-
-def standalone_function(data, location, startTerminal):
-    SyncClient(location, startTerminal)
-    return "Left sync client, back in main client"
-
-
-def server_function(location):
-    return SyncClient(location, False)

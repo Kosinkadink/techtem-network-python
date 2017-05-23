@@ -17,7 +17,7 @@ class TemplateProt(object):
     __location__ = None
     protDict = {}
     # change this to default values
-    standalone = True
+    standalone = False
     default_command = None
     varDict = dict(send_cache=409600, scriptname='template', version='3.0.0')
     funcMap = dict()  # fill with string:functions pairs
@@ -28,7 +28,9 @@ class TemplateProt(object):
         self.injectSpecificCode()
         self.startTerminal = startTerminal
         self.shouldExit = False
-        self.terminalMap = {"exit": (lambda data: self.exit()), "clear": (lambda data: self.boot())}
+        self.standalone = True
+        self.terminalMap = {"exit": (lambda data: self.exit()), "clear": (lambda data: self.boot()),
+                            "help": (lambda data: self.help())}
         self.initialize()
 
 

@@ -89,7 +89,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
 
             prot(__location__, startTerminal=True)
             self.boot()
-            print("Left {}, back in main client.".format(scriptname))
+            print("Left {} client, back in main client.".format(scriptname))
             return None
         except Exception, e:
             print(str(e))

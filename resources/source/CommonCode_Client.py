@@ -18,15 +18,16 @@ class TemplateProt(object):
     protDict = {}
     # change this to default values
     standalone = True
+    default_command = None
     varDict = dict(send_cache=409600, scriptname='template', version='3.0.0')
     funcMap = dict()  # fill with string:functions pairs
 
-    def __init__(self, location, startTerminal, default_c=None):
+    def __init__(self, location, startTerminal):
         self.__location__ = location
         self.injectCommonCode()
         self.injectSpecificCode()
         self.startTerminal = startTerminal
-        self.set_default_command(default_c)
+        self.shouldExit = False
         self.terminalMap = {"exit": (lambda data: self.exit()), "clear": (lambda data: self.boot())}
         self.initialize()
 
@@ -168,18 +169,17 @@ class TemplateProt(object):
 
     def boot(self):
         self.clear()
-        print "TechTem Token Client started"
-        print "Version " + self.version
-        print "Type help for command list\n"
+        print("TechTem {} Client started".format(self.varDict["scriptname"]))
+        print("Version {}".format(self.varDict["scriptname"]))
+        print("Type help for command list\n")
 
     def help(self):
         print "\nclear: clears screen"
         print "exit: closes program"
-        print "encrypt OR enc: toggle encryption status"
 
     def serverterminal(self):
         self.boot()
-        while 1:
+        while not self.shouldExit:
             inp = raw_input(">")
             user_inp = inp.split()
             if not user_inp:
@@ -191,7 +191,7 @@ class TemplateProt(object):
 
     def exit(self):
         self.cleanProcesses()
-        quit()
+        self.shouldExit = True
 
     def cleanProcesses(selfs):
         pass

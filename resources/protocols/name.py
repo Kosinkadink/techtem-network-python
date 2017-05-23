@@ -10,10 +10,11 @@ import CommonCode_Client
 class TemplateProt(CommonCode_Client.TemplateProt):
     standalone = False
     default_vars = ["url"]
+    default_command = "getname"
     varDict = dict(send_cache=409600, scriptname='name', version='3.0.0')
 
     def __init__(self, location, startTerminal):
-        CommonCode_Client.TemplateProt.__init__(self, location, startTerminal, default_c="getname")
+        CommonCode_Client.TemplateProt.__init__(self, location, startTerminal)
 
     def set_funcMap(self):
         self.add_to_funcMap("getname", self.getNameCommand)

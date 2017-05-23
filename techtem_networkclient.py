@@ -63,41 +63,37 @@ class NetworkClient(CommonCode_Client.TemplateProt):
                     variables = 'Unknown'
                 print '%s --> standalone=%s, input=%s' % (scriptname, str(isAlone), str(variables))
 
-    def startStandalone(self, data):  # used to start protocols not requiring connection
-
+    def startStandalone(self, scriptname):  # used to start protocols not requiring connection
         try:
-            scriptname = data[0]
             compat = 'n'
             with open(__location__ + '/resources/protocols/protlist.txt') as protlist:
                 for line in protlist:
-                    if line == scriptname or line == scriptname + '\n':
+                    if line.strip() == scriptname:
                         compat = 'y'
                         break
-
             if compat == 'y':
                 script = sys.modules[scriptname]
                 try:
-                    isAlone = getattr(script, 'standalone')
+                    isAlone = getattr(script.TemplateProt, 'standalone')
                 except:
                     isAlone = False
                 finally:
                     if not isAlone:
-                        return 'protocol is not specified as standalone'
-                varcheck = getattr(script, 'variables')
-                if len(varcheck) <= len(data):
-                    function = getattr(script, 'standalonefunction')
-                    use = getattr(script, function)
-                    print 'success'
-                else:
-                    print 'incorrect argument[s]'
+                        print('protocol is not specified as standalone')
+                        return None
+                prot = script.TemplateProt
+                print('success')
             else:
-                return 'failure - protocol not found'
+                print('failure - protocol not found')
+                return None
 
-            query = use(data, __location__, True)
+            prot(__location__, startTerminal=True)
             self.boot()
-            return query
+            print("Left {}, back in main client.".format(scriptname))
+            return None
         except Exception, e:
-            return str(e)
+            print(str(e))
+            return None
 
     def termConnectCommand(self, data):
         receivedip = self.makenameconnection(data)
@@ -175,6 +171,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
 
     def makenameconnecton(self, data):
         nameservers = self.parse_settings_file(os.path.join(__location__ ,'resources/programparts/name/nameservers.txt'))
+        # connect to only one of the
 
     # def makenameconnection(self, data):
     #     with open(__location__ + '/resources/programparts/name/nameservers.txt', "r") as nservelist:
@@ -199,9 +196,6 @@ class NetworkClient(CommonCode_Client.TemplateProt):
             os.system('cls')
         else:
             os.system('clear')
-
-    def exit(self):
-        quit()
 
 
 if __name__ == '__main__':

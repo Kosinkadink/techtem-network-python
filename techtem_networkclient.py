@@ -48,11 +48,13 @@ class NetworkClient(CommonCode_Client.TemplateProt):
         print "help OR ?: displays this menu"
 
     def printProts(self):
-        with open(__location__ + '/resources/protocols/protlist.txt') as protlist:
-            for scriptname in protlist:
-                if scriptname.endswith('\n'):
-                    scriptname = scriptname[:-1]
-                script = sys.modules[scriptname]
+        protlist = self.protManager.get_available_list()
+        for scriptname in protlist:
+            script = self.protManager.get_protocol(scriptname)
+            # check if protocol is imported
+            if script is None:
+                print "{} --> not imported"
+            else:
                 try:
                     isAlone = getattr(script.TemplateProt, 'standalone')
                 except Exception, e:
@@ -61,39 +63,39 @@ class NetworkClient(CommonCode_Client.TemplateProt):
                     variables = getattr(script.TemplateProt, 'default_vars')
                 except Exception, e:
                     variables = 'Unknown'
-                print '%s --> standalone=%s, input=%s' % (scriptname, str(isAlone), str(variables))
+                print '{} --> standalone={}, input={}'.format(scriptname, str(isAlone), str(variables))
 
     def startStandalone(self, scriptname):  # used to start protocols not requiring connection
+        script = self.protManager.get_protocol(scriptname)
+        # check if protocol is imported
         try:
-            compat = 'n'
-            with open(__location__ + '/resources/protocols/protlist.txt') as protlist:
-                for line in protlist:
-                    if line.strip() == scriptname:
-                        compat = 'y'
-                        break
-            if compat == 'y':
-                script = sys.modules[scriptname]
+            if script is None:
+                print "ERROR: {} is not imported or does not exist".format(scriptname)
+            else:
                 try:
                     isAlone = getattr(script.TemplateProt, 'standalone')
                 except:
                     isAlone = False
                 finally:
                     if not isAlone:
-                        print('protocol is not specified as standalone')
+                        print "ERROR: {} is not specified as standalone".format(scriptname)
                         return None
                 prot = script.TemplateProt
-                print('success')
-            else:
-                print('failure - protocol not found')
+                print("success loading {}".format(scriptname))
+                # run protocol
+                prot(self.__location__, startTerminal=True)
+                self.boot()
+                print("Left {} client, back in main client.".format(scriptname))
+                return None
+        except Exception, e:
+                print("ERROR: {}".format(str(e)))
                 return None
 
-            prot(__location__, startTerminal=True)
-            self.boot()
-            print("Left {} client, back in main client.".format(scriptname))
-            return None
-        except Exception, e:
-            print(str(e))
-            return None
+    def loadStandalone(self, scriptname):
+        pass
+
+    def unloadStandalone(self, scriptname):
+        pass
 
     def termConnectCommand(self, data):
         receivedip = self.makenameconnection(data)
@@ -169,8 +171,8 @@ class NetworkClient(CommonCode_Client.TemplateProt):
             return True
         return False
 
-    def makenameconnecton(self, data):
-        nameservers = self.parse_settings_file(os.path.join(__location__ ,'resources/programparts/name/nameservers.txt'))
+    def makenameconnection(self, data):
+        nameservers = self.parse_settings_file(os.path.join(__location__,'resources/programparts/name/nameservers.txt'))
         # connect to only one of the
 
     # def makenameconnection(self, data):

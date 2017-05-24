@@ -155,29 +155,29 @@ def send_file(s, file_path, file_name, send_cache):
     return {"status": 200, "msg": "OK"}
 
 
-def gen_protlist(__location__):
-    # file used for identifying what protocols are available
-    # delete contents of file
-    with open(__location__ + '/resources/protocols/protlist.txt', "w") as protlist:
-        # fill it up with relevvant protocols
-        for file in os.listdir(__location__ + '/resources/protocols/'):
-            if file.endswith('.py'):
-                prot = file[:-3]
-                filename = __location__ + '/resources/protocols/' + prot + '.py'
-                directory, module_name = os.path.split(filename)
-                module_name = os.path.splitext(module_name)[0]
-
-                path = list(sys.path)
-                sys.path.insert(0, directory)
-                try:
-                    module = __import__(module_name)  # cool import command
-                except Exception, e:
-                    raise e
-                else:
-                    # write prot into file if successful import
-                    protlist.write(prot + '\n')
-                finally:
-                    sys.path[:] = path
+# def gen_protlist(__location__):
+#     # file used for identifying what protocols are available
+#     # delete contents of file
+#     with open(__location__ + '/resources/protocols/protlist.txt', "w") as protlist:
+#         # fill it up with relevvant protocols
+#         for file in os.listdir(__location__ + '/resources/protocols/'):
+#             if file.endswith('.py'):
+#                 prot = file[:-3]
+#                 filename = __location__ + '/resources/protocols/' + prot + '.py'
+#                 directory, module_name = os.path.split(filename)
+#                 module_name = os.path.splitext(module_name)[0]
+#
+#                 path = list(sys.path)
+#                 sys.path.insert(0, directory)
+#                 try:
+#                     module = __import__(module_name)  # cool import command
+#                 except Exception, e:
+#                     raise e
+#                 else:
+#                     # write prot into file if successful import
+#                     protlist.write(prot + '\n')
+#                 finally:
+#                     sys.path[:] = path
 
 
 def get_netPass(__location__):
@@ -230,3 +230,79 @@ def config(varDic, __location__):
             varDic['serverport'] = oldPort
 
     return varDic
+
+
+class ProtocolManager(object):
+
+    def __init__(self, location, import_auto=True):
+        self.__location__ = location
+        self.available = set()
+        self.protocols = {}
+        self.loadedProtocols = {}
+        self.gen_available_protocols(import_auto)
+
+    def add_to_available(self, name):
+        self.available.add(name)
+
+    def get_available_list(self):
+        return sorted(self.available)
+
+    def clear_protocols(self):
+        for prot in self.available:
+            self.remove_protocol(prot)
+        self.available.clear()
+
+    def add_protocol(self, name, prot):
+        self.protocols[name] = prot
+
+    def remove_protocol(self, name):
+        if name in self.protocols:
+            self.unload_protocol(name)
+            self.protocols.pop(name, None)
+            return True
+        else:
+            return False
+
+    def get_protocol(self, name):
+        return self.protocols.get(name, None)
+
+    def load_protocol(self, name, location):
+        if name in self.protocols and name not in self.loadedProtocols:
+            self.loadedProtocols[name] = self.protocols[name].TemplateProt(location, startTerminal=False)
+            return True
+        else:
+            return False
+
+    def unload_protocol(self, name):
+        if name in self.loadedProtocols:
+            self.loadedProtocols[name].exit()
+            self.loadedProtocols.pop(name, None)
+            return True
+        else:
+            return False
+
+    def gen_available_protocols(self, import_auto=True):
+        protocols_dir = os.path.join(self.__location__, "resources/protocols/")
+        for file in os.listdir(protocols_dir):
+            if file.endswith(".py"):
+                prot = file[:-3]
+                self.add_to_available(prot)
+                if import_auto:
+                    self.import_manual(prot)
+
+    def import_manual(self, name):
+        if name in self.available:
+            filename = self.__location__ + '/resources/protocols/' + name + '.py'
+            directory, module_name = os.path.split(filename)
+            module_name = os.path.splitext(module_name)[0]
+
+            path = list(sys.path)
+            sys.path.insert(0, directory)
+            try:
+                module_imported = __import__(module_name)  # cool import command
+            except Exception, e:
+                raise e
+            else:
+                self.add_protocol(module_name, module_imported)
+            finally:
+                sys.path[:] = path

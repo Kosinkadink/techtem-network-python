@@ -15,7 +15,6 @@ class TemplateProt(object):
     netPass = None
     startTerminal = True
     __location__ = None
-    protDict = {}
     # change this to default values
     standalone = False
     default_command = None
@@ -29,15 +28,15 @@ class TemplateProt(object):
         self.startTerminal = startTerminal
         self.shouldExit = False
         self.standalone = True
+        self.protManager = self.ProtocolManager(self.__location__)
         self.terminalMap = {"exit": (lambda data: self.exit()), "clear": (lambda data: self.boot()),
                             "help": (lambda data: self.help())}
         self.initialize()
 
-
     def run_processes(self):
         if self.startTerminal:
-            # now do server terminal
-            self.serverterminal()
+            # now start terminal wrapper
+            self.terminalwrapper()
 
     def process_string_to_dict(self, input_string):
         return {"default": input_string}
@@ -78,7 +77,6 @@ class TemplateProt(object):
             self.__location__ + '/resources/downloads')  # used to store downloaded files
         if not os.path.exists(self.__location__ + '/resources/networkpass'): os.makedirs(
             self.__location__ + '/resources/networkpass')  # contains network passwords
-        self.gen_protlist(self.__location__)
         self.generateContextTLS()
         self.netPass = self.get_netPass(self.__location__)
         self.init_spec()
@@ -90,7 +88,7 @@ class TemplateProt(object):
         self.clear = CommonCode.clear
         self.parse_settings_file = CommonCode.parse_settings_file
         self.get_netPass = CommonCode.get_netPass
-        self.gen_protlist = CommonCode.gen_protlist
+        self.ProtocolManager = CommonCode.ProtocolManager
         self.recv_file = CommonCode.recv_file
         self.send_file = CommonCode.send_file
 
@@ -171,29 +169,33 @@ class TemplateProt(object):
 
     def boot(self):
         self.clear()
-        print("TechTem {} Client started".format(self.varDict["scriptname"]))
-        print("Version {}".format(self.varDict["scriptname"]))
+        print("TechTem {} Client started".format(self.varDict["scriptname"].capitalize()))
+        print("Version {}".format(self.varDict["version"]))
         print("Type help for command list\n")
 
     def help(self):
         print "\nclear: clears screen"
         print "exit: closes program"
 
-    def serverterminal(self):
+    def terminalwrapper(self):
         self.boot()
         while not self.shouldExit:
             inp = raw_input(">")
-            user_inp = inp.split()
-            if not user_inp:
-                pass
-            try:
-                self.terminalMap[user_inp[0]](user_inp)
-            except KeyError, e:
-                print("ERROR: terminal command \"{}\" is not recognized".format(user_inp[0]))
+            self.serverterminal(inp)
+
+    def serverterminal(self, inp):  # used for server commands
+        user_inp = inp.split()
+        if not user_inp:
+            pass
+        try:
+            self.terminalMap[user_inp[0]](user_inp)
+        except KeyError, e:
+            print str(e)
+            print("ERROR: terminal command {} is not recognized".format(user_inp[0]))
 
     def exit(self):
         self.cleanProcesses()
         self.shouldExit = True
 
-    def cleanProcesses(selfs):
+    def cleanProcesses(self):
         pass

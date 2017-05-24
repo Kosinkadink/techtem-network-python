@@ -57,6 +57,7 @@ class TemplateServer(object):
             self.varDict["serverport"] = int(serve)
         self.startUser = startUser
         self.shouldExit = False
+        self.protManager = self.ProtocolManager(self.__location__)
         self.funcMap = {}  # fill in with a string key and a function value
         self.terminalMap = {"exit": (lambda data: self.exit()), "clear": (lambda data: self.clear()),
                             "info": (lambda data: self.info())}
@@ -123,7 +124,6 @@ class TemplateServer(object):
         if not os.path.exists(self.__location__ + '/resources/networkpass'): os.makedirs(
             self.__location__ + '/resources/networkpass')  # contains network passwords
         # perform all tasks
-        self.gen_protlist(self.__location__)
         self.generateContextTLS()
         self.init_spec()
         # config stuff
@@ -143,7 +143,7 @@ class TemplateServer(object):
         self.clear = CommonCode.clear
         self.parse_settings_file = CommonCode.parse_settings_file
         self.get_netPass = CommonCode.get_netPass
-        self.gen_protlist = CommonCode.gen_protlist
+        self.ProtocolManager = CommonCode.ProtocolManager
         self.config = CommonCode.config
         self.recv_file = CommonCode.recv_file
         self.send_file = CommonCode.send_file

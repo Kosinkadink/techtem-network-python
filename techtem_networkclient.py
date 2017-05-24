@@ -88,8 +88,8 @@ class NetworkClient(CommonCode_Client.TemplateProt):
                 print("Left {} client, back in main client.".format(scriptname))
                 return None
         except Exception, e:
-                print("ERROR: {}".format(str(e)))
-                return None
+            print("ERROR: {}".format(str(e)))
+            return None
 
     def loadStandalone(self, scriptname):
         pass
@@ -192,12 +192,6 @@ class NetworkClient(CommonCode_Client.TemplateProt):
     #                 except Exception, e:
     #                     print e
     #         return "None of the listed name servers could be reached"
-
-    def clear(self):  # clear screen, typical way
-        if os.name == 'nt':
-            os.system('cls')
-        else:
-            os.system('clear')
 
 
 if __name__ == '__main__':

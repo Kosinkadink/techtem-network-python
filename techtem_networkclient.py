@@ -18,6 +18,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
     serverport = None
     serverports = None
     varDict = dict(send_cache=409600, scriptname='network_client', version='3.0.0')
+    nullVarDict = dict(send_cache=None, scriptname=None, version=None)
 
     def __init__(self, location, startTerminal=True):
         CommonCode_Client.TemplateProt.__init__(self, location, startTerminal)
@@ -48,9 +49,9 @@ class NetworkClient(CommonCode_Client.TemplateProt):
         print "help OR ?: displays this menu"
 
     def printProts(self):
-        protlist = self.protManager.get_available_list()
+        protlist = self.protocolManager.get_available_list()
         for scriptname in protlist:
-            script = self.protManager.get_protocol(scriptname)
+            script = self.protocolManager.get_protocol(scriptname)
             # check if protocol is imported
             if script is None:
                 print "{} --> not imported"
@@ -66,7 +67,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
                 print '{} --> standalone={}, input={}'.format(scriptname, str(isAlone), str(variables))
 
     def startStandalone(self, scriptname):  # used to start protocols not requiring connection
-        script = self.protManager.get_protocol(scriptname)
+        script = self.protocolManager.get_protocol(scriptname)
         # check if protocol is imported
         try:
             if script is None:
@@ -98,7 +99,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
         pass
 
     def termConnectCommand(self, data):
-        receivedip = self.makenameconnection(data)
+        receivedip = self.getIPFromName(data[0])
         print receivedip
         return self.connectViaProt(receivedip, data[1:])
 
@@ -106,7 +107,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
         return self.connectViaProt(ip, data)
 
     def connectViaProt(self, receivedip, data):
-        query = self.connectip(self, receivedip, data, 'none:none_function:1.0')
+        query = self.connectip(self, receivedip, None, self.nullVarDict)
         print query
         if query.startswith('n|'):
             need = query.split('|')[1]
@@ -171,9 +172,11 @@ class NetworkClient(CommonCode_Client.TemplateProt):
             return True
         return False
 
-    def makenameconnection(self, data):
-        nameservers = self.parse_settings_file(os.path.join(__location__,'resources/programparts/name/nameservers.txt'))
-        # connect to only one of the
+    def getIPFromName(self, name):
+        # load protocol and make name request
+        return self.protocolManager.load_protocol("name", self.__location__).makeNameConnection(name)
+
+
 
     # def makenameconnection(self, data):
     #     with open(__location__ + '/resources/programparts/name/nameservers.txt', "r") as nservelist:

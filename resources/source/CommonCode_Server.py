@@ -170,7 +170,7 @@ class TemplateServer(object):
         if not user_inp:
             pass
         try:
-            self.terminalMap[user_inp[0]](user_inp)
+            return self.terminalMap[user_inp[0]](user_inp)
         except KeyError, e:
             print str(e)
             print("ERROR: terminal command {} is not recognized".format(user_inp[0]))

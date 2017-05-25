@@ -28,7 +28,7 @@ class TemplateProt(object):
         self.startTerminal = startTerminal
         self.shouldExit = False
         self.standalone = True
-        self.protManager = self.ProtocolManager(self.__location__)
+        self.protocolManager = self.ProtocolManager(self.__location__)
         self.terminalMap = {"exit": (lambda data: self.exit()), "clear": (lambda data: self.boot()),
                             "help": (lambda data: self.help())}
         self.initialize()
@@ -38,8 +38,8 @@ class TemplateProt(object):
             # now start terminal wrapper
             self.terminalwrapper()
 
-    def process_string_to_dict(self, input_string):
-        return {"default": input_string}
+    def process_list_to_dict(self, input_list):
+        return {"default": input_list[0]}
 
     def set_terminalMap(self):
         pass
@@ -104,11 +104,14 @@ class TemplateProt(object):
         self.context.load_verify_locations(cafile=os.path.join(cert_loc, 'techtem_cert.pem'))
 
     def init_spec(self):
-        if not os.path.exists(self.__location__ + '/resources/programparts/%s' % self.varDict["scriptname"]): os.makedirs(
+        if not os.path.exists(
+                    self.__location__ + '/resources/programparts/%s' % self.varDict["scriptname"]): os.makedirs(
             self.__location__ + '/resources/programparts/%s' % self.varDict["scriptname"])
 
-        if not os.path.exists(self.__location__ + '/resources/programparts/%s/serverlist.txt' % self.varDict["scriptname"]):
-            with open(self.__location__ + '/resources/programparts/%s/serverlist.txt' % self.varDict["scriptname"], "a") as seeds:
+        if not os.path.exists(
+                        self.__location__ + '/resources/programparts/%s/serverlist.txt' % self.varDict["scriptname"]):
+            with open(self.__location__ + '/resources/programparts/%s/serverlist.txt' % self.varDict["scriptname"],
+                      "a") as seeds:
                 seeds.write("""####################################################
 # The format is: ip:port
 # Files will be sent to and from these servers
@@ -130,12 +133,14 @@ class TemplateProt(object):
         try:
             s.connect((host, port))
         except:
+            print 'closing connection :('
             s.close()
             return "Server at " + ip + " not available\n"
         print "\nConnection successful to " + ip
-        return self.connectprotocolclient(self, s, data, command, funcMapping, dataToStore)
+        return self.connectprotocolclient(s, data, command, funcMapping, dataToStore)
 
-    def connectprotocolclient(self, s, data, command, funcMapping, dataToStore):  # communicate via protocol to command seed
+    def connectprotocolclient(self, s, data, command, funcMapping,
+                              dataToStore):  # communicate via protocol to command seed
         # wrap socket with TLS, handshaking happens automatically
         s = self.context.wrap_socket(s)
         # wrap socket with socketTem, to send length of message first
@@ -161,7 +166,10 @@ class TemplateProt(object):
         # determine if good to go
         if conn_resp["status"] != 200:
             s.close()
-            print "failure. closing connection: {0}:{1}".format(conn_resp["status"], conn_resp["msg"])
+            print "failure. closing connection: {0}:{1}:{2},{3},{4}".format(conn_resp["status"], conn_resp["msg"],
+                                                                        conn_resp["downloadAddrIP"],
+                                                                        conn_resp["downloadAddrLoc"],
+                                                                        conn_resp["errors"])
             return conn_resp
         else:
             print "success. continuing..."
@@ -181,14 +189,15 @@ class TemplateProt(object):
         self.boot()
         while not self.shouldExit:
             inp = raw_input(">")
-            self.serverterminal(inp)
+            print self.serverterminal(inp)
 
     def serverterminal(self, inp):  # used for server commands
         user_inp = inp.split()
+        print user_inp
         if not user_inp:
-            pass
+            print "no inp"
         try:
-            self.terminalMap[user_inp[0]](user_inp)
+            return self.terminalMap[user_inp[0]](user_inp)
         except KeyError, e:
             print str(e)
             print("ERROR: terminal command {} is not recognized".format(user_inp[0]))

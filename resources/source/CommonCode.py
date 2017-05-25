@@ -266,12 +266,17 @@ class ProtocolManager(object):
     def get_protocol(self, name):
         return self.protocols.get(name, None)
 
+    def get_loaded_protocol_object(self, name):
+        return self.loadedProtocols.get(name, None)
+
     def load_protocol(self, name, location):
         if name in self.protocols and name not in self.loadedProtocols:
             self.loadedProtocols[name] = self.protocols[name].TemplateProt(location, startTerminal=False)
-            return True
+            return self.loadedProtocols.get(name)
+        elif name in self.loadedProtocols:
+            return self.loadedProtocols.get(name)
         else:
-            return False
+            return None
 
     def unload_protocol(self, name):
         if name in self.loadedProtocols:

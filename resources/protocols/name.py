@@ -8,7 +8,7 @@ import CommonCode_Client
 
 
 class TemplateProt(CommonCode_Client.TemplateProt):
-    standalone = False
+    standalone = True
     default_vars = ["url"]
     default_command = "getname"
     varDict = dict(send_cache=409600, scriptname='name', version='3.0.0')
@@ -19,6 +19,12 @@ class TemplateProt(CommonCode_Client.TemplateProt):
     def set_funcMap(self):
         self.add_to_funcMap("getname", self.getNameCommand)
 
+    def set_terminalMap(self):
+        self.terminalMap["getname"] = (lambda data: self.makeNameConnection(data[1]))
+
+    def process_list_to_dict(self, input_list):
+        return {"default": input_list[0]}
+
     def init_spec_extra(self):
         if not os.path.exists(self.__location__ + '/resources/programparts/%s/nameservers.txt' % self.varDict["scriptname"]):
             with open(self.__location__ + '/resources/programparts/%s/nameservers.txt' % self.varDict["scriptname"],
@@ -28,19 +34,8 @@ class TemplateProt(CommonCode_Client.TemplateProt):
     def getNameCommand(self, s, data=None, dataToSave=None):
         return ast.literal_eval(s.recv(128))
 
-# def name_function(cliObj):
-#     s = cliObj.s
-#     data = cliObj.data
-#
-#     s.sendall('name')
-#     s.recv(2)
-#     url = data[0]
-#
-#     rqst = str(url)
-#     print 'requesting ip'
-#     s.sendall(rqst)
-#     has = s.recv(1)
-#     s.sendall('ok')
-#     # get message
-#     ip = s.recv(1024)
-#     return ip
+    def makeNameConnection(self, name_request):
+        nameservers = self.parse_settings_file(
+            os.path.join(self.__location__, 'resources/programparts/name/nameservers.txt'))
+        for server in nameservers:
+            return self.connectip(server[0], {"namereq": name_request}, "getname")

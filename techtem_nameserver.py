@@ -23,7 +23,7 @@ class TemplateServer(CommonCode_Server.TemplateServer):
     def __init__(self, location, serve=varDict["serverport"], user=varDict["userport"], startUser=True):
         CommonCode_Server.TemplateServer.__init__(self, location, serve, user, startUser)
         self.funcMap = {
-            'name': self.getNameCommand
+            'getname': self.getNameCommand
         }
 
     def init_spec_extra(self):
@@ -38,48 +38,16 @@ class TemplateServer(CommonCode_Server.TemplateServer):
         nameDict = {}
         for combo in namelist:
             nameDict[combo[0]] = combo[1]
+        print nameDict
         return nameDict
 
     def getNameCommand(self, s, data):
         try:
             ip = self.nameDict[data["namereq"]]
         except KeyError,e:
-            s.sendall(json.dumps({"status": 404, "msg":"name does not exist"}))
+            s.sendall(json.dumps({"status": 404, "msg":"name {} does not exist".format(data["namereq"])}))
         else:
             s.sendall(json.dumps({"status": 200, "msg": ip}))
-
-    # def searchurls(self, rqst):
-    #     exists = False
-    #     with open(__location__ + '/resources/programparts/name/techtemurls.txt') as file:
-    #         for line in file:
-    #             if line.startswith('||'):
-    #                 url = line.split("||")
-    #                 if url[1] == rqst:
-    #                     ip = url[2]
-    #                     exists = True
-    #                     break
-    #     if exists:
-    #         return (True, ip)
-    #     else:
-    #         return (False, 'name does not exist')
-    #
-    # def name_server(self, s):
-    #     rqst = s.recv(1024)
-    #     print "Requested name: " + rqst
-    #     success, message = self.searchurls(rqst.lower())
-    #     if success:
-    #         s.sendall('y')
-    #         s.recv(2)
-    #         print "Corresponding IP: " + message
-    #         s.sendall(message)
-    #     if not success:
-    #         s.sendall('n')
-    #         s.recv(2)
-    #         s.sendall(message)
-
-    # def exit(self):  # kill all proceses for a tidy exit
-    #     self.shouldExit = True
-
 
 if __name__ == '__main__':
     CommonCode_Server.main(sys.argv[1:], TemplateServer, __location__)

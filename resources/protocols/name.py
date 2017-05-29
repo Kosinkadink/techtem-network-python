@@ -8,6 +8,11 @@ import CommonCode_Client
 
 
 class TemplateProt(CommonCode_Client.TemplateProt):
+    """
+    Protocol's data sent is as follows:
+        {"namereq": name_request}: string type
+    Returns ip corresponding to name_request string 
+    """
     standalone = True
     default_vars = ["url"]
     default_command = "getname"
@@ -23,7 +28,12 @@ class TemplateProt(CommonCode_Client.TemplateProt):
         self.terminalMap["getname"] = (lambda data: self.makeNameConnection(data[1]))
 
     def process_list_to_dict(self, input_list):
-        return {"default": input_list[0]}
+        """
+        Transform a list of strings into proper dictionary output to be sent to server
+        :param input_list: list containing name requested
+        :return: dictionary to use as data
+        """
+        return {"namereq": input_list[0]}
 
     def init_spec_extra(self):
         if not os.path.exists(self.__location__ + '/resources/programparts/%s/nameservers.txt' % self.varDict["scriptname"]):
@@ -38,4 +48,4 @@ class TemplateProt(CommonCode_Client.TemplateProt):
         nameservers = self.parse_settings_file(
             os.path.join(self.__location__, 'resources/programparts/name/nameservers.txt'))
         for server in nameservers:
-            return self.connectip(server[0], {"namereq": name_request}, "getname")
+            return self.connectip(server[0], self.process_list_to_dict([name_request]), "getname")

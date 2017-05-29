@@ -18,7 +18,6 @@ class NetworkClient(CommonCode_Client.TemplateProt):
     serverport = None
     serverports = None
     varDict = dict(send_cache=409600, scriptname='network_client', version='3.0.0')
-    nullVarDict = dict(send_cache=None, scriptname=None, version=None)
 
     def __init__(self, location, startTerminal=True):
         CommonCode_Client.TemplateProt.__init__(self, location, startTerminal)
@@ -166,7 +165,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
 
     def confirmDownload(self, receivedip, need, downloc):
         confirm = raw_input(
-            'Server at %s points at %s to download the nessecary protocol %s. Proceed with download?\n>> ' % (
+            'Server at %s points at %s to download the necessary protocol %s. Proceed with download?\n>> ' % (
                 receivedip, downloc.split('&&')[0], need))
         if confirm.lower() == 'y':
             return True
@@ -175,27 +174,6 @@ class NetworkClient(CommonCode_Client.TemplateProt):
     def getIPFromName(self, name):
         # load protocol and make name request
         return self.protocolManager.load_protocol("name", self.__location__).makeNameConnection(name)
-
-
-
-    # def makenameconnection(self, data):
-    #     with open(__location__ + '/resources/programparts/name/nameservers.txt', "r") as nservelist:
-    #         for line in nservelist:
-    #             if line.startswith('||'):
-    #                 try:
-    #                     host = line.split('||')[1].split(':')[0]
-    #                     port = line.split('||')[1].split(':')[1]
-    #                     ip = '%s:%s' % (host, port)
-    #                     scriptname = 'name'
-    #                     script = sys.modules[scriptname]
-    #                     function = getattr(script, 'clientfunction')
-    #                     scriptversion = getattr(script, 'version')
-    #                     command = '%s:%s:%s' % (scriptname, function, scriptversion)
-    #                     return self.connectip(self, ip, data, command)
-    #                 except Exception, e:
-    #                     print e
-    #         return "None of the listed name servers could be reached"
-
 
 if __name__ == '__main__':
     program = NetworkClient(__location__)

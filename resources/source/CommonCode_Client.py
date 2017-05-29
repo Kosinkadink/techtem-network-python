@@ -19,7 +19,9 @@ class TemplateProt(object):
     standalone = False
     default_command = None
     varDict = dict(send_cache=409600, scriptname='template', version='3.0.0')
+    nullVarDict = dict(send_cache=None, scriptname=None, version=None)
     funcMap = dict()  # fill with string:functions pairs
+    nullFuncMap = dict(NULL=None)
 
     def __init__(self, location, startTerminal):
         self.__location__ = location
@@ -122,7 +124,10 @@ class TemplateProt(object):
     def init_spec_extra(self):
         pass
 
-    def connectip(self, ip, data, command, funcMapping=funcMap, dataToStore=None):  # connect to ip
+    def connect_with_null_dict(self, ip):
+        return self.connectip(ip, None, "NULL", funcMapping=self.nullFuncMap, varDictToUse=self.nullVarDict)
+
+    def connectip(self, ip, data, command, funcMapping=funcMap, dataToStore=None, varDictToUse=varDict): # connect to ip
         try:
             host = ip.split(':')[0]
             port = int(ip.split(':')[1])
@@ -137,10 +142,10 @@ class TemplateProt(object):
             s.close()
             return "Server at " + ip + " not available\n"
         print "\nConnection successful to " + ip
-        return self.connectprotocolclient(s, data, command, funcMapping, dataToStore)
+        return self.connectprotocolclient(s, data, command, funcMapping, dataToStore, varDictToUse)
 
     def connectprotocolclient(self, s, data, command, funcMapping,
-                              dataToStore):  # communicate via protocol to command seed
+                              dataToStore, varDictToUse=varDict):  # communicate via protocol to command seed
         # wrap socket with TLS, handshaking happens automatically
         s = self.context.wrap_socket(s)
         # wrap socket with socketTem, to send length of message first
@@ -148,8 +153,8 @@ class TemplateProt(object):
         # create connection request
         conn_req = json.dumps({
             "netpass": self.netPass,
-            "scriptname": self.varDict["scriptname"],
-            "version": self.varDict["version"],
+            "scriptname": varDictToUse["scriptname"],
+            "version": varDictToUse["version"],
             "command": command,
             "data": data
         })

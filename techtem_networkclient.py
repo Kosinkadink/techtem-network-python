@@ -106,7 +106,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
         return self.connectViaProt(ip, data)
 
     def connectViaProt(self, receivedip, data):
-        query = self.connectip(self, receivedip, None, self.nullVarDict)
+        query = self.connect_with_null_dict(receivedip)
         print query
         if query.startswith('n|'):
             need = query.split('|')[1]

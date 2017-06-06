@@ -107,7 +107,6 @@ class NetworkClient(CommonCode_Client.TemplateProt):
 
     def connectViaProt(self, receivedip, data):
         query = self.connect_with_null_dict(receivedip)
-        print query
         # check if response is usable
         if query["status"] != 400:
             # this is unexpected... don't trust it!
@@ -132,56 +131,7 @@ class NetworkClient(CommonCode_Client.TemplateProt):
                 # otherwise, download succeeded so continue after loading protocol
                 self.protocolManager.gen_available_protocols()
             # has protocol, so use it after import
-            print data
             return self.protocolManager.load_protocol(query["scriptname"],self.__location__).perform_default_command([data,receivedip])
-
-
-
-
-
-                    #return
-        # if query.startswith('n|'):
-        #     need = query.split('|')[1]
-        #     downloc = query.split('|')[2]
-        #     scriptname, function, scriptversion = need.split(':')
-        #     compat = False
-        #     with open(__location__ + '/resources/protocols/protlist.txt') as protlist:
-        #         for line in protlist:
-        #             if line == scriptname or line == scriptname + '\n':
-        #                 compat = True
-        #     if not compat:
-        #         if need != '':
-        #             confirm = self.confirmDownload(receivedip, need, downloc)
-        #             if not confirm:
-        #                 return """Download aborted. Client requires script '%s' of version '%s' to connect to this server; client does not posses the script""" % (
-        #                     scriptname, scriptversion)
-        #             print 'Download confirmed'
-        #             protdownload = self.downloadProt(downloc)
-        #             print protdownload
-        #             if protdownload != '111':
-        #                 return """File not found on designated file server. Client requires script '%s' of version '%s' to connect to this server; client does not posses the script""" % (
-        #                     scriptname, scriptversion)
-        #             self.gen_protlist()
-        #             with open(__location__ + '/resources/protocols/protlist.txt') as protlist:
-        #                 for line in protlist:
-        #                     if line == scriptname or line == scriptname + '\n':
-        #                         compat = True
-        #             if not compat:
-        #                 return """Client requires script '%s' of version '%s' to connect to this server; client does not posses the script""" % (
-        #                     scriptname, scriptversion)
-        #         else:
-        #             return """Client requires script '%s' of version '%s' to connect to this server; client does not posses the script""" % (
-        #                 scriptname, scriptversion)
-        #
-        #     script = sys.modules[scriptname]
-        #     preversion = getattr(script, 'version')
-        #     if preversion == scriptversion:
-        #         return self.connectip(self, receivedip, data, '%s:%s:%s' % (scriptname, function, scriptversion))
-        #     else:
-        #         return """Client requires script '%s' of version '%s' to connect to this server; client has wrong version '%s'""" % (
-        #             scriptname, scriptversion, preversion)
-        # else:
-        #     return 'Communication complete'
 
     def downloadProt(self, downloc):
         ip, loc = downloc.split('&&')

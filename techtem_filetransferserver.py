@@ -43,7 +43,7 @@ class TemplateServer(CommonCode_Server.TemplateServer):
             # exists, tell the client to receive it
             s.sendall("y")
             # get filename
-            file_name = data["file"].split("/")
+            file_name = data["file"].split("/")[-1]
             # send file
             self.send_file(s, file_path, file_name, self.varDict["send_cache"])
 

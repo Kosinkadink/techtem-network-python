@@ -19,7 +19,7 @@ class TemplateProt(object):
     standalone = False
     default_command = None
     varDict = dict(send_cache=409600, scriptname='template', version='3.0.0')
-    nullVarDict = dict(send_cache=None, scriptname=None, version=None)
+    nullVarDict = dict(send_cache="None", scriptname="None", version="None")
     funcMap = dict()  # fill with string:functions pairs
     nullFuncMap = dict(NULL=None)
 
@@ -41,6 +41,11 @@ class TemplateProt(object):
             self.terminalwrapper()
 
     def process_list_to_dict(self, input_list):
+        """
+        Transform a list of strings into proper dictionary output to be sent to server
+        :param input_list: list
+        :return: dictionary to use as data
+        """
         return {"default": input_list[0]}
 
     def set_terminalMap(self):
@@ -51,6 +56,9 @@ class TemplateProt(object):
 
     def add_to_funcMap(self, command, func):
         self.funcMap[command] = func
+
+    def add_to_terminalMap(self, command, func):
+        self.terminalMap[command] = func
 
     def set_default_command(self, command):
         if command is not None:
@@ -64,6 +72,16 @@ class TemplateProt(object):
             return self.varDict["default_command"]
         except KeyError:
             return None
+
+    def perform_default_command(self, input=None):
+        def_inp = [self.default_command]
+        if not input:
+            pass
+        elif isinstance(input,list):
+            def_inp.extend(input)
+        else:
+            def_inp.append(input)
+        return self.terminalMap[self.default_command](def_inp)
 
     def initialize(self):
         if not os.path.exists(self.__location__ + '/resources'): os.makedirs(self.__location__ + '/resources')
@@ -125,9 +143,11 @@ class TemplateProt(object):
         pass
 
     def connect_with_null_dict(self, ip):
-        return self.connectip(ip, None, "NULL", funcMapping=self.nullFuncMap, varDictToUse=self.nullVarDict)
+        return self.connectip(ip, "None", "NULL", funcMapping=self.nullFuncMap, varDictToUse=self.nullVarDict)
 
-    def connectip(self, ip, data, command, funcMapping=funcMap, dataToStore=None, varDictToUse=varDict): # connect to ip
+    def connectip(self, ip, data, command, funcMapping=funcMap, dataToStore=None, varDictToUse=None): # connect to ip
+        if not varDictToUse:
+            varDictToUse = self.varDict
         try:
             host = ip.split(':')[0]
             port = int(ip.split(':')[1])
@@ -198,13 +218,12 @@ class TemplateProt(object):
 
     def serverterminal(self, inp):  # used for server commands
         user_inp = inp.split()
-        print user_inp
         if not user_inp:
-            print "no inp"
+            print("no inp")
         try:
             return self.terminalMap[user_inp[0]](user_inp)
         except KeyError, e:
-            print str(e)
+            print(str(e))
             print("ERROR: terminal command {} is not recognized".format(user_inp[0]))
 
     def exit(self):

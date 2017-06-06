@@ -27,9 +27,16 @@ class TemplateProt(CommonCode_Client.TemplateProt):
     def set_funcMap(self):
         self.add_to_funcMap("fileget", self.getFileCommand)
 
-    def process_string_to_dict(self, input_string):
-        processed = {}
-        cut_string = input_string.strip().split()
+    def set_terminalMap(self):
+        self.terminalMap["getfile"] = (lambda data: self.makeFileDownloadConnection(data[1:]))
+
+    def process_list_to_dict(self, input_list):
+        """
+        Transform a list of strings into proper dictionary output to be sent to server
+        :param input_list: list containing files requested
+        :return: dictionary to use as data
+        """
+        return {"file": input_list[0]}
 
     def getFileCommand(self, s, data, dataToSave):
         if dataToSave["saveloc"] is None:
@@ -43,6 +50,12 @@ class TemplateProt(CommonCode_Client.TemplateProt):
             # download requested file
             return self.recv_file(s, downloadsLocation, dataToSave["file_name"], self.varDict["send_cache"])
 
+    def makeFileDownloadConnection(self, ip, files_to_get, saveLoc = None):
+        # if argument is string, convert to list
+        if isinstance(files_to_get,type("")):
+            files_to_get = [files_to_get]
+        dataToKeep = {"saveloc": saveLoc}
+        return self.connectip(ip, self.process_list_to_dict(files_to_get), "fileget", dataToStore=dataToKeep)
 #
 # def filetransfer_client(cliObj):
 #     s = cliObj.s

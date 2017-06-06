@@ -254,7 +254,8 @@ class TemplateServer(object):
         # wrap socket with socketTem, to send length of message first
         s = CommonCode.socketTem(s)
         # receive connection request
-        conn_req = ast.literal_eval(s.recv(1024))
+        client_request = s.recv(1024)
+        conn_req = ast.literal_eval(client_request)
         # determine if good to go
         readyToGo = True
         responses = {"status": 200, "msg": "OK"}
@@ -265,7 +266,7 @@ class TemplateServer(object):
         # check script info
         if conn_req["scriptname"] != self.varDict["scriptname"]:
             readyToGo = False
-            responses.setdefault("errors", []).append("invalid scriptname")
+            responses.setdefault("errors", []).append("invalid scriptname: {}".format(conn_req["scriptname"]))
         if conn_req["version"] != self.varDict["version"]:
             readyToGo = False
             responses.setdefault("errors", []).append("invalid version")
@@ -288,5 +289,7 @@ class TemplateServer(object):
             responses["msg"] = "BAD"
             responses["downloadAddrIP"] = self.varDict["downloadAddrIP"]
             responses["downloadAddrLoc"] = self.varDict["downloadAddrLoc"]
+            responses["scriptname"] = self.varDict["scriptname"]
+            responses["version"] = self.varDict["version"]
             conn_resp = json.dumps(responses)
             s.sendall(conn_resp)

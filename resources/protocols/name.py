@@ -25,7 +25,7 @@ class TemplateProt(CommonCode_Client.TemplateProt):
         self.add_to_funcMap("getname", self.getNameCommand)
 
     def set_terminalMap(self):
-        self.terminalMap["getname"] = (lambda data: self.makeNameConnection(data[1]))
+        self.terminalMap["getname"] = (lambda data: self.makeNameConnection(data[1],data[2]))
 
     def process_list_to_dict(self, input_list):
         """
@@ -44,8 +44,13 @@ class TemplateProt(CommonCode_Client.TemplateProt):
     def getNameCommand(self, s, data=None, dataToSave=None):
         return ast.literal_eval(s.recv(128))
 
-    def makeNameConnection(self, name_request):
-        nameservers = self.parse_settings_file(
-            os.path.join(self.__location__, 'resources/programparts/name/nameservers.txt'))
+    def makeNameConnection(self, name_request, ip=None):
+        if not ip:
+            nameservers = self.parse_settings_file(
+                os.path.join(self.__location__, 'resources/programparts/name/nameservers.txt'))
+        else:
+            nameservers = [[ip]]
         for server in nameservers:
-            return self.connectip(server[0], self.process_list_to_dict([name_request]), "getname")
+            if not isinstance(name_request,list):
+                name_request = [name_request]
+            return self.connectip(server[0], self.process_list_to_dict(name_request), "getname")

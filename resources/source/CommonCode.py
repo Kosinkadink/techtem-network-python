@@ -244,6 +244,9 @@ class ProtocolManager(object):
     def add_to_available(self, name):
         self.available.add(name)
 
+    def check_if_available(self, name):
+        return name in self.available
+
     def get_available_list(self):
         return sorted(self.available)
 
